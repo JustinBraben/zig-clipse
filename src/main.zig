@@ -15,15 +15,15 @@ pub fn main() !void {
     defer argObject.deinit();
 
     try argObject.parseCommandLine();
+    //argObject.printArgumentsList();
 
-    // var list = try IntList.init(allocator);
-    // defer list.deinit();
+    //print("arguments : {any}\n", .{argObject.arguments_list.items});
+    print("total arguments : {any} , arguments : {s}\n", .{ argObject.arguments_list.items.len, argObject.arguments_list.items });
+    //print("We now have arguments in memory, for example : {s}\n", .{argObject.arguments_list.items});
 
-    // for (0..10) |i| {
-    //     try list.add(@intCast(i));
+    // for (argObject.arguments_list.items) |item| {
+    //     print("We now have arguments in memory, for example : {any}\n", .{item});
     // }
-
-    // std.debug.print("{any}\n", .{list.items[0..list.pos]});
 }
 
 test "simple test" {
