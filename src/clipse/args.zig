@@ -5,9 +5,7 @@ const fmt = std.fmt;
 pub const Args = struct {
     args_allocated: std.process.ArgIterator,
 
-    pub fn deinit(self: *Args, allocator: std.mem.Allocator) void {
-        _ = allocator; // autofix
-
+    pub fn deinit(self: *Args) void {
         self.args_allocated.deinit();
     }
 

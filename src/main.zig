@@ -13,7 +13,7 @@ pub fn main() !void {
     const gpa = gpa_allocator.allocator();
 
     var parse_args = try Args.init(gpa);
-    defer parse_args.deinit(gpa);
+    defer parse_args.deinit();
 
     while (parse_args.args_allocated.next()) |arg| {
         print("arg : {s}\n", .{arg});
