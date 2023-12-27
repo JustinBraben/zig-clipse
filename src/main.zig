@@ -1,22 +1,29 @@
 const std = @import("std");
-const args = @import("clipse/args.zig");
+const args = @import("clipse/args.zig").args;
 const User = @import("clipse/data_structures/user.zig").User;
 const IntList = @import("clipse/data_structures/IntList.zig").IntList;
+const print = std.debug.print;
 
 const testing = std.testing;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer std.testing.expect(gpa.deinit() != .leak) catch @panic("memory leak");
     const allocator = gpa.allocator();
 
-    var list = try IntList.init(allocator);
-    defer list.deinit();
+    var argObject = try args.init(allocator);
+    defer argObject.deinit();
 
-    for (0..10) |i| {
-        try list.add(@intCast(i));
-    }
+    try argObject.parseCommandLine();
 
-    std.debug.print("{any}\n", .{list.items[0..list.pos]});
+    // var list = try IntList.init(allocator);
+    // defer list.deinit();
+
+    // for (0..10) |i| {
+    //     try list.add(@intCast(i));
+    // }
+
+    // std.debug.print("{any}\n", .{list.items[0..list.pos]});
 }
 
 test "simple test" {
