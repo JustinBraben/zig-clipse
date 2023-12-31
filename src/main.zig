@@ -1,4 +1,5 @@
 const std = @import("std");
+const Display = @import("chip8/display.zig").Display;
 const assert = std.debug.assert;
 
 const User = @import("clipse/data_structures/user.zig").User;
@@ -17,5 +18,12 @@ pub fn main() !void {
 
     while (parse_args.args_allocated.next()) |arg| {
         print("arg : {s}\n", .{arg});
+    }
+
+    var display = try Display.init("CHIP-8", 800, 400);
+    defer display.deinit();
+
+    while (display.open) {
+        display.input();
     }
 }
