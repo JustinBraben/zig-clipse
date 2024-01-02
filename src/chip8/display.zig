@@ -33,6 +33,7 @@ pub const Display = struct {
     }
 
     pub fn deinit(self: *Self) void {
+        std.debug.print("Display quit has been called\n", .{});
         c.SDL_DestroyWindow(self.window);
         c.SDL_Quit();
     }

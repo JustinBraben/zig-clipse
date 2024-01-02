@@ -1,5 +1,6 @@
 const std = @import("std");
 const Display = @import("chip8/display.zig").Display;
+const BitMap = @import("chip8/bitmap.zig").Bitmap;
 const assert = std.debug.assert;
 
 const User = @import("clipse/data_structures/user.zig").User;
@@ -19,6 +20,9 @@ pub fn main() !void {
     while (parse_args.args_allocated.next()) |arg| {
         print("arg : {s}\n", .{arg});
     }
+
+    var bitmap = try BitMap.init(gpa, 64, 32);
+    defer bitmap.deinit();
 
     var display = try Display.init("CHIP-8", 800, 400);
     defer display.deinit();
