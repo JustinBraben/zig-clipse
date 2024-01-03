@@ -1,0 +1,46 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug exe",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/zig-out/bin/zig-clipse.exe",
+            "args": [
+                "Hiya"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/zig-out/bin",
+            "symbolSearchPath": "${workspaceFolder}/zig-out/bin",
+            "environment": [],
+            "externalConsole": false,
+            "logging": {
+                "moduleLoad": false
+            },
+        },
+        {
+            "name": "Debug",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceRoot}/zig-out/bin/zig-clipse",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceRoot}",
+            "environment": [],
+            "preLaunchTask": "build main",
+            "osx": {
+                "MIMode": "lldb"
+            },
+            "windows": {
+                "type": "cppvsdbg",
+                "console": "integratedTerminal",
+            },
+            "linux": {
+                "MIMode": "lldb"
+            }
+        }
+    ]
+}
