@@ -23,11 +23,13 @@ pub fn main() !void {
 
     var bitmap = try BitMap.init(gpa, 64, 32);
     defer bitmap.deinit();
+    _ = bitmap.setPixel(5, 5);
 
-    var display = try Display.init("CHIP-8", 800, 400);
+    var display = try Display.init("CHIP-8", 800, 400, bitmap.width, bitmap.height);
     defer display.deinit();
 
     while (display.open) {
         display.input();
+        display.draw(&bitmap);
     }
 }
