@@ -2,6 +2,7 @@ const std = @import("std");
 const Display = @import("chip8/display.zig").Display;
 const BitMap = @import("chip8/bitmap.zig").Bitmap;
 const Device = @import("chip8/device.zig").Device;
+const CPU = @import("chip8/cpu.zig").CPU;
 const assert = std.debug.assert;
 
 const User = @import("clipse/data_structures/user.zig").User;
@@ -15,12 +16,12 @@ pub fn main() !void {
     defer std.testing.expect(gpa_allocator.deinit() != .leak) catch @panic("memory leak");
     const gpa = gpa_allocator.allocator();
 
-    var parse_args = try Args.init(gpa);
-    defer parse_args.deinit();
+    // var parse_args = try Args.init(gpa);
+    // defer parse_args.deinit();
 
-    while (parse_args.args_allocated.next()) |arg| {
-        print("arg : {s}\n", .{arg});
-    }
+    // while (parse_args.args_allocated.next()) |arg| {
+    //     print("arg : {s}\n", .{arg});
+    // }
 
     var device = try Device.init(gpa);
     defer device.deinit();
@@ -32,13 +33,29 @@ pub fn main() !void {
 
     var bitmap = try BitMap.init(gpa, 64, 32);
     defer bitmap.deinit();
-    _ = bitmap.setPixel(5, 5);
 
     var display = try Display.init("CHIP-8", 800, 400, bitmap.width, bitmap.height);
     defer display.deinit();
 
+    // CPU does not allocate any memory, so no deinit is needed
+    var cpu = CPU.init(&device.memory, &bitmap, &display);
+
+    const fps: f32 = 60.0;
+    const fps_interval = 1000.0 / fps;
+    var previous_time = std.time.milliTimestamp();
+    var current_time = std.time.milliTimestamp();
+
     while (display.open) {
         display.input();
+
+        current_time = std.time.milliTimestamp();
+
+        if (@as(f32, @floatFromInt(current_time - previous_time)) > fps_interval) {
+            previous_time = current_time;
+
+            cpu.tick();
+        }
+
         display.draw(&bitmap);
     }
 }

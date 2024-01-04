@@ -8,8 +8,6 @@ const Bitmap = @import("bitmap.zig").Bitmap;
 pub const Display = struct {
     const Self = @This();
 
-    width: i32,
-    height: i32,
     window: *c.SDL_Window,
     renderer: *c.SDL_Renderer,
     framebuffer: *c.SDL_Texture,
@@ -49,8 +47,6 @@ pub const Display = struct {
         };
 
         return Self{
-            .width = width,
-            .height = height,
             .window = window,
             .renderer = renderer,
             .framebuffer = framebuffer,
@@ -63,6 +59,8 @@ pub const Display = struct {
 
     pub fn deinit(self: *Self) void {
         std.debug.print("Display quit has been called\n", .{});
+        c.SDL_DestroyTexture(self.framebuffer);
+        c.SDL_DestroyRenderer(self.renderer);
         c.SDL_DestroyWindow(self.window);
         c.SDL_Quit();
     }
