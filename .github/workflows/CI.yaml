@@ -30,12 +30,42 @@ jobs:
     runs-on: ${{matrix.os}}
     steps:
       - uses: actions/checkout@v2
+
       - uses: goto-bus-stop/setup-zig@v2
         #with:
         #  version: 0.12.0
+
       - name: setup-linux
         if: matrix.os == 'ubuntu-latest'
         run: | 
           sudo apt-get update && sudo apt-get install libsdl2-dev
-      - name: build
-        run: zig build
+
+      - name: Build Unix
+        if: matrix.os != 'windows-latest'
+        run: |
+          # Find all folders containing build.zig, build.zig.zon, src/, src/main.zig
+          projects=$(find . -type d -exec test -e "{}/build.zig" -a -e "{}/build.zig.zon" -a -e "{}/src/" -a -e "{}/src/main.zig" \; -print)
+          
+          # Build each project
+          for project in $projects; do
+            cd $project
+            zig build
+            cd -
+          done
+
+      - name: Build Windows
+        if: matrix.os == 'windows-latest'
+        run: |
+          $projects = Get-ChildItem -Recurse -Directory | Where-Object {
+            (Test-Path (Join-Path $_.FullName 'build.zig')) -and
+            (Test-Path (Join-Path $_.FullName 'build.zig.zon')) -and
+            (Test-Path (Join-Path $_.FullName 'src')) -and
+            (Test-Path (Join-Path $_.FullName 'src/main.zig'))
+          }
+
+          # Build each project
+          foreach ($project in $projects) {
+            cd $project.FullName
+            zig build
+            cd $PSScriptRoot
+          }

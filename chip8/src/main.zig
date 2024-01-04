@@ -1,8 +1,8 @@
 const std = @import("std");
-const Display = @import("chip8/display.zig").Display;
-const BitMap = @import("chip8/bitmap.zig").Bitmap;
-const Device = @import("chip8/device.zig").Device;
-const CPU = @import("chip8/cpu.zig").CPU;
+const Display = @import("display.zig").Display;
+const BitMap = @import("bitmap.zig").Bitmap;
+const Device = @import("device.zig").Device;
+const CPU = @import("cpu.zig").CPU;
 const assert = std.debug.assert;
 
 const User = @import("clipse/data_structures/user.zig").User;
