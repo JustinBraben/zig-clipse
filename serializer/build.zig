@@ -36,6 +36,13 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const duck = b.dependency("duck", .{
+        .optimize = optimize,
+        .target = target,
+    });
+    // for exe, lib, tests, etc.
+    exe.addModule("duck", duck.module("duck"));
+
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default
     // step when running `zig build`).

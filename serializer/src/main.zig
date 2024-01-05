@@ -1,24 +1,27 @@
 const std = @import("std");
+const Person = @import("person.zig").Person;
+const print = std.debug.print;
 
 pub fn main() !void {
-    // Prints to stderr (it's a shortcut based on `std.io.getStdErr()`)
-    std.debug.print("All your {s} are belong to us.\n", .{"codebase"});
+    print("Hello\n", .{});
 
-    // stdout is for the actual output of your application, for example if you
-    // are implementing gzip, then only the compressed bytes should be sent to
-    // stdout, not any debugging messages.
-    const stdout_file = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_file);
-    const stdout = bw.writer();
+    const p1 = Person{
+        .name = "Landon",
+        .age = 22,
+        .isStudent = true,
+    };
 
-    try stdout.print("Run `zig build test` to run the tests.\n", .{});
+    //const typeInfo = @typeInfo(@TypeOf(p1));
 
-    try bw.flush(); // don't forget to flush!
-}
+    print("TypeOf p1 : {}\n", .{@TypeOf(p1)});
 
-test "simple test" {
-    var list = std.ArrayList(i32).init(std.testing.allocator);
-    defer list.deinit(); // try commenting this out and see if zig detects the memory leak!
-    try list.append(42);
-    try std.testing.expectEqual(@as(i32, 42), list.pop());
+    const p1TypeInfo = @typeInfo(Person);
+    _ = p1TypeInfo; // autofix
+
+    //print("p1 type info : {any}\n", .{p1TypeInfo});
+
+    // // Iterate over each field in the struct
+    // for (typeInfo.fields) |field| {
+    //     print("  - {} ({s})\n", .{ field.name, field.type.name });
+    // }
 }
