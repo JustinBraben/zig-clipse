@@ -46,12 +46,14 @@ jobs:
           # Find all folders containing build.zig, build.zig.zon, src/, src/main.zig
           projects=$(find . -type d -exec test -e "{}/build.zig" -a -e "{}/build.zig.zon" -a -e "{}/src/" -a -e "{}/src/main.zig" \; -print)
           
+          echo $projects
+
           # Build each project
-          for project in $projects; do
-            cd $project
-            zig build
-            cd -
-          done
+          # for project in $projects; do
+          #   cd $project
+          #   zig build
+          #   cd -
+          # done
 
       - name: Build Windows
         if: matrix.os == 'windows-latest'
@@ -63,9 +65,11 @@ jobs:
             (Test-Path (Join-Path $_.FullName 'src/main.zig'))
           }
 
+          Write-Host $projects
+
           # Build each project
-          foreach ($project in $projects) {
-            cd $project.FullName
-            zig build
-            cd $PSScriptRoot
-          }
+          # foreach ($project in $projects) {
+          #   cd $project.FullName
+          #   zig build
+          #   cd $PSScriptRoot
+          # }
