@@ -50,20 +50,80 @@ pub fn main() !void {
 
         debug.print("Real path is {s}, outputting contents\n", .{real_path});
 
-        var file = try std.fs.openFileAbsolute(real_path, .{});
-        defer file.close();
+        const buff = try readFile(allocator, real_path);
+        defer allocator.free(buff);
 
-        var buf_reader = io.bufferedReader(file.reader());
-        var in_stream = buf_reader.reader();
+        var lines = std.mem.splitSequence(u8, buff, "\n");
 
-        var lines_to_zig = std.ArrayList([]u8).init(allocator);
-        defer lines_to_zig.deinit();
+        debug.print("First line is {s}\n", .{lines.first()});
 
-        var buf: [1024]u8 = undefined;
-        while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-            debug.print("{s}\n", .{line});
+        while (lines.next()) |line| {
+            // debug.print("{s}\n", .{line});
+            // debug.print("newline\n", .{});
+            debug.print("Line size is {}\n", .{line.len});
         }
+
+        //debug.print("{any}\n", .{lines});
+
+        // while (lines.next()) |line| {
+        //     //debug.print("{s}\n", .{line});
+
+        //     var tokens = std.mem.tokenizeScalar(u8, line, '\n');
+        //     while (tokens.next()) |token| {
+        //         debug.print("{s}\n", .{token});
+        //         if (std.mem.startsWith(u8, token, "//")) {
+        //             debug.print("{s}\n", .{token});
+        //         }
+        //     }
+
+        //     // if (std.mem.startsWith(u8, line, "#include")) {
+        //     //     debug.print("Found a line that starts with #include !\n", .{});
+        //     // }
+
+        //     //debug.print("All of line is {s}\n", .{line[0..]});
+
+        //     // var tokens = std.mem.splitScalar(u8, line, '#');
+        //     // while (tokens.next()) |token| {
+        //     //     debug.print("{s}\n", .{token});
+        //     // }
+
+        //     // var tokens = std.mem.tokenizeSequence(u8, line, "#");
+
+        //     // while (tokens.next()) |token| {
+        //     //     debug.print("{s}\n", .{token});
+        //     // }
+        // }
+
+        // var file = try std.fs.openFileAbsolute(real_path, .{});
+        // defer file.close();
+
+        // const stat = try file.stat();
+        // var buff = try file.readToEndAlloc(allocator, max_bytes: usize)
+
+        // var buf_reader = io.bufferedReader(file.reader());
+        // var in_stream = buf_reader.reader();
+
+        // var lines_to_zig = std.ArrayList([]u8).init(allocator);
+        // defer lines_to_zig.deinit();
+
+        // var buf: [1024]u8 = undefined;
+        // while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
+        //     debug.print("{s}\n", .{line});
+        //     try lines_to_zig.append(line);
+        // }
     }
+}
+
+fn readFile(allocator: std.mem.Allocator, filename: []const u8) ![]u8 {
+    const file = try std.fs.cwd().openFile(
+        filename,
+        .{ .mode = .read_only },
+    );
+    defer file.close();
+
+    const stat = try file.stat();
+    const buff = try file.readToEndAlloc(allocator, stat.size);
+    return buff;
 }
 
 test "replace" {

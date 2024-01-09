@@ -48,7 +48,7 @@ jobs:
           
           echo $projects
 
-          Build each project
+          # Build each project
           for project in $projects; do
             cd $project
             zig build
@@ -67,7 +67,7 @@ jobs:
 
           Write-Host $projects
 
-          Build each project
+          # Build each project
           foreach ($project in $projects) {
             cd $project.FullName
             zig build

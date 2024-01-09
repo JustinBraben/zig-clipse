@@ -41,6 +41,23 @@
             "linux": {
                 "MIMode": "lldb"
             }
-        }
+        },
+        {
+            "name": "Debug vertazig exe Windows",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/vertazig/zig-out/bin/vertazig.exe",
+            "args": [
+                "C:/Users/Justin/source/repos/NoobBoy/src/gb.h"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/vertazig/zig-out/bin",
+            "symbolSearchPath": "${workspaceFolder}/vertazig/zig-out/bin",
+            "environment": [],
+            "externalConsole": false,
+            "logging": {
+                "moduleLoad": false
+            },
+        },
     ]
 }
