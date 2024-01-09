@@ -48,12 +48,12 @@ jobs:
           
           echo $projects
 
-          # Build each project
-          # for project in $projects; do
-          #   cd $project
-          #   zig build
-          #   cd -
-          # done
+          Build each project
+          for project in $projects; do
+            cd $project
+            zig build
+            cd -
+          done
 
       - name: Build Windows
         if: matrix.os == 'windows-latest'
@@ -67,9 +67,9 @@ jobs:
 
           Write-Host $projects
 
-          # Build each project
-          # foreach ($project in $projects) {
-          #   cd $project.FullName
-          #   zig build
-          #   cd $PSScriptRoot
-          # }
+          Build each project
+          foreach ($project in $projects) {
+            cd $project.FullName
+            zig build
+            cd $PSScriptRoot
+          }
