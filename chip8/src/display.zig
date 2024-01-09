@@ -1,7 +1,5 @@
 const std = @import("std");
-const c = @cImport({
-    @cInclude("SDL2/SDL.h");
-});
+const c = @import("clibs.zig");
 
 const Bitmap = @import("bitmap.zig").Bitmap;
 

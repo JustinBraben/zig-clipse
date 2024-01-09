@@ -16,12 +16,12 @@ pub fn main() !void {
     defer std.testing.expect(gpa_allocator.deinit() != .leak) catch @panic("memory leak");
     const gpa = gpa_allocator.allocator();
 
-    // var parse_args = try Args.init(gpa);
-    // defer parse_args.deinit();
+    var parse_args = try Args.init(gpa);
+    defer parse_args.deinit();
 
-    // while (parse_args.args_allocated.next()) |arg| {
-    //     print("arg : {s}\n", .{arg});
-    // }
+    while (parse_args.args_allocated.next()) |arg| {
+        print("arg : {s}\n", .{arg});
+    }
 
     var device = try Device.init(gpa);
     defer device.deinit();
