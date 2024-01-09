@@ -36,12 +36,17 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
-    const duck = b.dependency("duck", .{
-        .optimize = optimize,
-        .target = target,
-    });
-    // for exe, lib, tests, etc.
-    exe.addModule("duck", duck.module("duck"));
+    const exe_options = b.addOptions();
+    exe.root_module.addOptions("build_options", exe_options);
+
+    // exe.root_module.addImport("sdl", b.dependency("sdl", .{}).module("sdl"));
+
+    // const duck = b.dependency("duck", .{
+    //     .optimize = optimize,
+    //     .target = target,
+    // });
+    // // for exe, lib, tests, etc.
+    // exe.addModule("duck", duck.module("duck"));
 
     // This declares intent for the executable to be installed into the
     // standard location when the user invokes the "install" step (the default

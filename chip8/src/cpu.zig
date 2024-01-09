@@ -5,18 +5,43 @@ const Display = @import("display.zig").Display;
 pub const CPU = struct {
     const Self = @This();
 
+    /// Memory represents the RAM used by the emulator.
     memory: *[]u8,
+
+    /// Bitmap represents the display buffer for drawing graphics.
     bitmap: *Bitmap,
+
+    /// Display is responsible for handling screen rendering.
     display: *Display,
+
+    /// Program counter (PC) keeps track of the currently executing instruction.
     pc: u16, // Program counter
+
+    /// Index register (I) is used for memory address operations.
     i: u16,
+
+    /// Delay timer (DT) decrements at a rate of 60Hz when not zero.
     dtimer: u8,
+
+    /// Sound timer (ST) decrements at a rate of 60Hz and plays a sound when not zero.
     stimer: u8,
+
+    /// General-purpose registers (V0 to VF) used for various operations.
     v: [16]u8,
+
+    /// Stack stores the program counter when a subroutine is called.
     stack: [16]u16,
+
+    /// Stack index represents the current level of the stack.
     stack_idx: u8,
+
+    /// Paused indicates whether the emulator is currently paused.
     paused: bool,
+
+    /// Paused_x is the index of the paused opcode for debugging purposes.
     paused_x: u8,
+
+    /// Speed represents the speed multiplier for the emulator (e.g., 2x speed).
     speed: u8,
 
     pub fn init(
