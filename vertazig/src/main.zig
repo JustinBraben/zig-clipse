@@ -44,73 +44,37 @@ pub fn main() !void {
     for (res.positionals) |pos| {
         debug.print("Checking positional : {s}\n", .{pos});
 
-        const real_path_buffer: *[98302]u8 = undefined;
+        const real_path_buff: *[std.fs.MAX_PATH_BYTES]u8 = undefined;
 
-        const real_path = try std.fs.realpath(pos, real_path_buffer);
+        const real_path = try std.fs.realpath(pos, real_path_buff);
 
         debug.print("Real path is {s}, outputting contents\n", .{real_path});
 
         const buff = try readFile(allocator, real_path);
         defer allocator.free(buff);
 
-        var lines = std.mem.splitSequence(u8, buff, "\n");
+        var lines = std.mem.splitScalar(u8, buff, '\n');
 
-        debug.print("First line is {s}\n", .{lines.first()});
+        //debug.print("First line is {s}\n", .{lines.first()});
 
         while (lines.next()) |line| {
-            // debug.print("{s}\n", .{line});
+            //debug.print("{s}\n", .{line});
             // debug.print("newline\n", .{});
-            debug.print("Line size is {}\n", .{line.len});
+            //debug.print("Line size is {}\n", .{line.len});
+            var tokens = std.mem.tokenizeScalar(u8, line, ' ');
+
+            while (tokens.next()) |token| {
+                debug.print("{s}\n", .{token});
+                if (std.mem.startsWith(u8, token, "#include")) {
+                    debug.print("Found #include token!\n", .{});
+                } else {
+                    debug.print("No #include token!\n", .{});
+                }
+            }
+            // if (std.mem.startsWith(u8, line, "//")) {
+            //     debug.print("{s}\n", .{line});
+            // }
         }
-
-        //debug.print("{any}\n", .{lines});
-
-        // while (lines.next()) |line| {
-        //     //debug.print("{s}\n", .{line});
-
-        //     var tokens = std.mem.tokenizeScalar(u8, line, '\n');
-        //     while (tokens.next()) |token| {
-        //         debug.print("{s}\n", .{token});
-        //         if (std.mem.startsWith(u8, token, "//")) {
-        //             debug.print("{s}\n", .{token});
-        //         }
-        //     }
-
-        //     // if (std.mem.startsWith(u8, line, "#include")) {
-        //     //     debug.print("Found a line that starts with #include !\n", .{});
-        //     // }
-
-        //     //debug.print("All of line is {s}\n", .{line[0..]});
-
-        //     // var tokens = std.mem.splitScalar(u8, line, '#');
-        //     // while (tokens.next()) |token| {
-        //     //     debug.print("{s}\n", .{token});
-        //     // }
-
-        //     // var tokens = std.mem.tokenizeSequence(u8, line, "#");
-
-        //     // while (tokens.next()) |token| {
-        //     //     debug.print("{s}\n", .{token});
-        //     // }
-        // }
-
-        // var file = try std.fs.openFileAbsolute(real_path, .{});
-        // defer file.close();
-
-        // const stat = try file.stat();
-        // var buff = try file.readToEndAlloc(allocator, max_bytes: usize)
-
-        // var buf_reader = io.bufferedReader(file.reader());
-        // var in_stream = buf_reader.reader();
-
-        // var lines_to_zig = std.ArrayList([]u8).init(allocator);
-        // defer lines_to_zig.deinit();
-
-        // var buf: [1024]u8 = undefined;
-        // while (try in_stream.readUntilDelimiterOrEof(&buf, '\n')) |line| {
-        //     debug.print("{s}\n", .{line});
-        //     try lines_to_zig.append(line);
-        // }
     }
 }
 
@@ -132,4 +96,12 @@ test "replace" {
     const expected: []const u8 = "All your Zig are belong to us";
     try std.testing.expect(replacements == 1);
     try std.testing.expectEqualStrings(expected, output[0..expected.len]);
+}
+
+test "starts_with" {
+    //var output: [21]u8 = undefined;
+    const line = "// #include <cstring>";
+    const include_line = "#include \"cpu.h\"";
+    try std.testing.expect(std.mem.startsWith(u8, line, "//"));
+    try std.testing.expect(std.mem.startsWith(u8, include_line, "#include"));
 }
