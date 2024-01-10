@@ -42,10 +42,6 @@
             .url = "https://github.com/fabioarnold/SDL/archive/db4a162db2f6f59f737d03f441455dc9524d5793.tar.gz",
             .hash = "1220c5360c9c71c215baa41b46ec18d0711059b48416a2b1cf96c7c2d87b2e8e4cf6",
         },
-        .glfw = .{
-            .url = "https://pkg.machengine.org/glfw/0e4cdba4216c6def0423462a2f21fef80683d56d.tar.gz",
-            .hash = "1220a0b036095c2c54af347c86514ed9dab431299f0140b0e434ed119f85a976c32b",
-        },
     },
 
     // Specifies the set of files and directories that are included in this package.
