@@ -7,7 +7,7 @@ const io = std.io;
 
 const assert = std.debug.assert;
 
-const errors = @import("Errors.zig");
+const errors = @import("errors.zig");
 
 pub const Args = struct {
     args_allocated: std.process.ArgIterator,
@@ -44,7 +44,7 @@ pub const Args = struct {
         };
 
         while (args.next()) |arg| {
-            if (std.mem.eql(u8, "--rom", arg)) {
+            if (std.mem.eql(u8, "-rom", arg)) {
                 if (args.next()) |inner_arg| {
                     final_args.rom = inner_arg;
                 }

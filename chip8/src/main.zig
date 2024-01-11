@@ -26,7 +26,7 @@ pub fn main() !void {
     var device = try Device.init(gpa);
     defer device.deinit();
 
-    if (!device.loadROM("./roms/blitz.rom")) {
+    if (!device.loadROM("./roms/breakout.rom")) {
         std.debug.print("Failed to load CHIP-8 ROM\n", .{});
         return;
     }
