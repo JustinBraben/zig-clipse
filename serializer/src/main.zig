@@ -25,40 +25,32 @@ pub fn main() !void {
 
     // print("TypeOf p1 : {}\n", .{@TypeOf(p1)});
 
-    const person_type = @TypeOf(p2);
-    switch (@typeInfo(person_type)) {
-        .Struct => print("person is a struct\n", .{}),
-        else => print("person is not a struct\n"),
-    }
+    // const person_type = @TypeOf(p2);
+    // switch (@typeInfo(person_type)) {
+    //     .Struct => print("person is a struct\n", .{}),
+    //     else => print("person is not a struct\n"),
+    // }
 
-    print("Type of : {}\n", .{person_type});
+    // print("Type of : {}\n", .{person_type});
 
-    printTypeName(@TypeOf(p1));
+    // printTypeName(@TypeOf(p1));
 
-    printFields(@TypeOf(p1));
+    // printFields(@TypeOf(p1));
 
-    const my_struct_info = getStructInfo(@TypeOf(p1));
-    printFields(@TypeOf(my_struct_info));
+    // const my_struct_info = getStructInfo(@TypeOf(p1));
+    // printFields(@TypeOf(my_struct_info));
 
-    // const s_info = getStructInfo(@TypeOf(p1));
-    // _ = s_info; // autofix
+    const serial_data = try serialize(@TypeOf(p1), p1);
+    print("serial data : {any}\n", .{serial_data});
 
-    // const p1_name_field_info = std.meta.fieldInfo(@TypeOf(p1), .name);
-    // std.debug.print("p1 name field info : {}\n", .{p1_name_field_info});
-
-    // const p1_field_info = std.meta.fieldIndex(@TypeOf(p1), "age");
-    // std.debug.print("Field_info : {any}\n", .{p1_field_info});
+    // const deserial_data = deserialize(@TypeOf(p1), serial_data);
+    // _ = deserial_data; // autofix
 }
 
 fn getStructInfo(comptime T: type) StructInfo {
     var result: StructInfo = undefined;
 
     result.name = @typeName(T);
-
-    // inline for (std.meta.fields(T)) |field| {
-    //     const field_info: [][]const u8 = .{ field.name, field.type };
-    //     result.field_properties = field_info;
-    // }
 
     return result;
 }
@@ -73,4 +65,44 @@ fn printFields(comptime T: type) void {
         std.debug.print("Field type \t: {}\n", .{field.type});
         std.debug.print("\n", .{});
     }
+}
+
+fn serialize(comptime T: type, value: T) ![]const u8 {
+    var buf: [255]u8 = undefined;
+    var fbs = std.io.fixedBufferStream(&buf);
+    const stream = fbs.writer();
+
+    // var buffer: [1024]u8 = undefined;
+    // var fbs = std.io.fixedBufferStream(&buffer);
+    // const stream = fbs.writer();
+
+    const info = @typeInfo(T);
+    switch (info) {
+        .Struct => |struct_info| {
+            inline for (struct_info.fields) |field| {
+                const field_value = @field(value, field.name);
+                try stream.print("{s}: {any}\n", .{ field.name, field_value });
+                print("serializing {s}: {any}\n", .{ field.name, field_value });
+            }
+        },
+        else => {},
+    }
+
+    return stream.context.getWritten();
+}
+
+fn deserialize(comptime T: type, serialized: []const u8) T {
+    var value: T = undefined;
+    var it = std.mem.splitScalar(u8, serialized, '\n');
+
+    while (it.next()) |line| {
+        var parts = std.mem.splitSequence(u8, line, ": ");
+        const field_name = parts.next() orelse "";
+        const field_value_str = parts.next() orelse "";
+
+        const field_value = @as(@TypeOf(@field(value, field_name)), @intCast(std.fmt.parseInt(i32, field_value_str, 10) catch 0));
+        @field(value, field_name) = field_value;
+    }
+
+    return value;
 }
