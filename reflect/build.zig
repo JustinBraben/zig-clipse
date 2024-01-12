@@ -19,13 +19,13 @@ pub fn build(b: *std.Build) void {
     const example_step = b.step("examples", "Build examples.");
     for ([_][]const u8{
         "basic",
-        // "complex.zig",
-        // "enum.zig",
-        // "flag.zig",
-        // "positional.zig",
-        // "required.zig",
-        // "subcommand.zig",
-        // "usage.zig",
+        "complex",
+        // "enum",
+        // "flag",
+        // "positional",
+        // "required",
+        // "subcommand",
+        // "usage",
     }) |example_name| {
         const example = b.addExecutable(.{
             .name = example_name,

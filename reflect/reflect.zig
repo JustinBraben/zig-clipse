@@ -20,13 +20,12 @@ pub fn printObject(comptime T: type, value: T) !void {
 }
 
 fn printObjectRecursive(comptime T: type, value: T) !void {
-    //const typeInfo = @typeInfo(T);
     switch (@typeInfo(T)) {
         //.Void => std.debug.print("{s} : void\n", .{@typeName(T)}),
         .Int,
         .Bool,
         .Float,
-        => std.debug.print("{s}\t\t: {}\n", .{ @typeName(T), value }),
+        => std.debug.print("{s:<20}: {}\n", .{ @typeName(T), value }),
 
         .Pointer => |ptr| {
             if (ptr.sentinel != null) @compileError("Sentinel pointers are not supported yet");
@@ -34,9 +33,9 @@ fn printObjectRecursive(comptime T: type, value: T) !void {
                 .One => try printObjectRecursive(ptr.child, value.*),
                 .Slice => {
                     if (ptr.child == u8) {
-                        std.debug.print("{s}\t: {s}\n", .{ @typeName(T), value });
+                        std.debug.print("{s:<20}: {s}\n", .{ @typeName(T), value });
                     } else {
-                        std.debug.print("{s}\t\t: {any}\n", .{ @typeName(T), value });
+                        std.debug.print("{s:<20}: {any}\n", .{ @typeName(T), value });
                     }
                 },
 
@@ -48,9 +47,9 @@ fn printObjectRecursive(comptime T: type, value: T) !void {
 
         .Array => |arr| {
             if (arr.child == u8) {
-                std.debug.print("{s}\t\t: {s}\n", .{ @typeName(T), value });
+                std.debug.print("{s:<20}: {s}\n", .{ @typeName(T), value });
             } else {
-                std.debug.print("{s}\t\t: {any}\n", .{ @typeName(T), value });
+                std.debug.print("{s:<20}: {any}\n", .{ @typeName(T), value });
             }
         },
 
@@ -59,7 +58,7 @@ fn printObjectRecursive(comptime T: type, value: T) !void {
             var struct_name_tokens = std.mem.tokenizeScalar(u8, struct_name, '.');
             while (struct_name_tokens.next()) |token| {
                 if (struct_name_tokens.next() == null) {
-                    std.debug.print("{s}\n", .{token});
+                    std.debug.print("{s:<20}\n", .{token});
                 }
             }
             inline for (obj.fields) |field| {
@@ -67,7 +66,7 @@ fn printObjectRecursive(comptime T: type, value: T) !void {
             }
         },
 
-        else => std.debug.print("{s}\t\t: not implemented yet...\n", .{@typeName(T)}),
+        else => std.debug.print("{s:<20}: not implemented yet...\n", .{@typeName(T)}),
         // .Void => std.debug.print("{s} : void\n", .{@typeName(typeInfo), }),
         // .Pointer => std.debug.print("{}", .{value}),
         // .Fn => std.debug.print("{}", .{value}),
@@ -90,6 +89,21 @@ fn printObjectRecursive(comptime T: type, value: T) !void {
         // .EnumTag => std.debug.print("{}", .{value}),
         // .ArgTuple => std.debug.print("{}", .{value}),
         // .Other => std.debug.print("{}", .{value}),
+    }
+}
+
+fn formatDebugPrint(comptime T: type, value: T) void {
+    switch (@typeInfo(T)) {
+        // For each datatype, we need to print the type name and the value
+        // And depending on the type, we need to print the value differently
+        // We want the formatting to have consistent spacing
+        .Int,
+        .Bool,
+        .Float,
+        => {
+            std.debug.print("{s:<20}: {}\n", .{ @typeName(T), value });
+        },
+        else => {},
     }
 }
 
