@@ -2,7 +2,6 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const reflect_mod = b.addModule("reflect", .{ .root_source_file = .{ .path = "reflect.zig" } });
-    _ = reflect_mod; // autofix
 
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
@@ -17,28 +16,28 @@ pub fn build(b: *std.Build) void {
     test_step.dependOn(&run_tests.step);
 
     // TODO: make examples to run
-    // const example_step = b.step("examples", "Build examples.");
-    // for ([_][]const u8{
-    //     "basic.zig",
-    //     "complex.zig",
-    //     "enum.zig",
-    //     "flag.zig",
-    //     "positional.zig",
-    //     "required.zig",
-    //     "subcommand.zig",
-    //     "usage.zig",
-    // }) |example_name| {
-    //     const example = b.addExecutable(.{
-    //         .name = example_name,
-    //         .root_source_file = .{ .path = b.fmt("example/{s}.zig", .{example_name}) },
-    //         .target = target,
-    //         .optimize = optimize,
-    //     });
-    //     const install_example = b.addInstallArtifact(example, .{});
-    //     example.root_module.addImport("reflect", reflect_mod);
-    //     example_step.dependOn(&example.step);
-    //     example_step.dependOn(&install_example.step);
-    // }
+    const example_step = b.step("examples", "Build examples.");
+    for ([_][]const u8{
+        "basic",
+        // "complex.zig",
+        // "enum.zig",
+        // "flag.zig",
+        // "positional.zig",
+        // "required.zig",
+        // "subcommand.zig",
+        // "usage.zig",
+    }) |example_name| {
+        const example = b.addExecutable(.{
+            .name = example_name,
+            .root_source_file = .{ .path = b.fmt("examples/{s}.zig", .{example_name}) },
+            .target = target,
+            .optimize = optimize,
+        });
+        const install_example = b.addInstallArtifact(example, .{});
+        example.root_module.addImport("reflect", reflect_mod);
+        example_step.dependOn(&example.step);
+        example_step.dependOn(&install_example.step);
+    }
 
     const docs_step = b.step("docs", "Generate docs.");
     const install_docs = b.addInstallDirectory(.{
@@ -56,7 +55,7 @@ pub fn build(b: *std.Build) void {
 
     const all_step = b.step("all", "Build everything and runs all tests");
     all_step.dependOn(test_step);
-    //all_step.dependOn(example_step);
+    all_step.dependOn(example_step);
     //all_step.dependOn(readme_step);
 
     b.default_step.dependOn(all_step);
