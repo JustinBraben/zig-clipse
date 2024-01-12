@@ -16,6 +16,10 @@ pub fn build(b: *std.Build) void {
         .root_source_file = .{ .path = "thirdparty/zig-clap/clap.zig" },
     });
 
+    exe.root_module.addAnonymousImport("reflect", .{
+        .root_source_file = .{ .path = "thirdparty/reflect/reflect.zig" },
+    });
+
     if (target.query.isNativeOs() and target.result.os.tag == .linux) {
         exe.linkSystemLibrary("SDL2");
         exe.linkLibC();

@@ -3,5 +3,5 @@
 /roms
 
 */roms
-*/zig-cache
-*/zig-out
+**/zig-cache
+**/zig-out

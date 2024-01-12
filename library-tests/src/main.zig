@@ -1,5 +1,9 @@
 const std = @import("std");
+
+// Third party libs
 const clap = @import("clap");
+const reflect = @import("reflect");
+
 const debug = std.debug;
 const io = std.io;
 const fs = std.fs;
@@ -44,4 +48,12 @@ pub fn main() !void {
     defer allocator.free(cwd);
 
     debug.print("cwd is {s}\n", .{cwd});
+
+    const num_u8_example: u8 = 2;
+    const bool_example: bool = true;
+    const float_f32_example: f32 = 2.0;
+
+    try reflect.printObject(@TypeOf(num_u8_example), num_u8_example);
+    try reflect.printObject(@TypeOf(bool_example), bool_example);
+    try reflect.printObject(@TypeOf(float_f32_example), float_f32_example);
 }
