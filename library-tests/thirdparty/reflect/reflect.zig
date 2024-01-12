@@ -54,6 +54,19 @@ fn printObjectRecursive(comptime T: type, value: T) !void {
             }
         },
 
+        .Struct => |obj| {
+            const struct_name: []const u8 = @typeName(T);
+            var struct_name_tokens = std.mem.tokenizeScalar(u8, struct_name, '.');
+            while (struct_name_tokens.next()) |token| {
+                if (struct_name_tokens.next() == null) {
+                    std.debug.print("{s}\n", .{token});
+                }
+            }
+            inline for (obj.fields) |field| {
+                try printObjectRecursive(field.type, @field(value, field.name));
+            }
+        },
+
         else => std.debug.print("{s}\t\t: not implemented yet...\n", .{@typeName(T)}),
         // .Void => std.debug.print("{s} : void\n", .{@typeName(typeInfo), }),
         // .Pointer => std.debug.print("{}", .{value}),

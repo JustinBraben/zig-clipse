@@ -12,13 +12,17 @@ pub fn main() !void {
     const bool_example: bool = true;
     const float_f32_example: f32 = 2.0;
     const string_example: []const u8 = "hello world";
-    //const slice_u64_example: []const u64 = &[_]u64{ 1, 2, 3 };
+    const slice_u64_example: []const u64 = &[_]u64{ 1, 2, 3 };
     const ptr_i32_example: *i32 = &num_i32_example;
+    const arr_u64_example: [3]u64 = [_]u64{ 1, 2, 3 };
+    const arr_u8_example: [3]u8 = [_]u8{ 1, 2, 3 };
 
     try reflect.printObject(@TypeOf(num_u8_example), num_u8_example);
     try reflect.printObject(@TypeOf(bool_example), bool_example);
     try reflect.printObject(@TypeOf(float_f32_example), float_f32_example);
     try reflect.printObject(@TypeOf(string_example), string_example);
-    //try reflect.printObject(@TypeOf(slice_u64_example), slice_u64_example);
+    try reflect.printObject(@TypeOf(slice_u64_example), slice_u64_example);
     try reflect.printObject(@TypeOf(ptr_i32_example), ptr_i32_example);
+    try reflect.printObject(@TypeOf(arr_u64_example), arr_u64_example);
+    try reflect.printObject(@TypeOf(arr_u8_example), arr_u8_example);
 }
