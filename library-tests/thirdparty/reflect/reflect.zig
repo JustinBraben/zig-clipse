@@ -27,11 +27,30 @@ fn printObjectRecursive(comptime T: type, value: T) !void {
         .Bool,
         .Float,
         => std.debug.print("{s}\t: {}\n", .{ @typeName(T), value }),
-        else => std.debug.print("Did not recognize type\n", .{}),
+
+        .Pointer => |ptr| {
+            if (ptr.sentinel != null) @compileError("Sentinel pointers are not supported yet");
+            switch (ptr.size) {
+                .One => try printObjectRecursive(ptr.child, value.*),
+                .Slice => {
+                    if (ptr.child == u8) {
+                        std.debug.print("{s}\t: {s}\n", .{ @typeName(T), value });
+                    } else {
+                        // TODO: Implement non u8 slices
+                        // for (value) |item| {
+                        //     try printObjectRecursive(ptr.child, item);
+                        // }
+                    }
+                },
+
+                .C,
+                .Many,
+                => std.debug.print(".C and .Many to be implemented...\n", .{}),
+            }
+        },
+
+        else => std.debug.print("{s}\t: not implemented yet...\n", .{@typeName(T)}),
         // .Void => std.debug.print("{s} : void\n", .{@typeName(typeInfo), }),
-        // .Bool => std.debug.print("{s} : {}\n", .{@typeName(typeInfo), value}),
-        // .Int => std.debug.print("{s} : {}\n", .{@typeName(typeInfo), value}),
-        // .Float => std.debug.print("{}", .{value}),
         // .Pointer => std.debug.print("{}", .{value}),
         // .Fn => std.debug.print("{}", .{value}),
         // .Enum => std.debug.print("{}", .{value}),

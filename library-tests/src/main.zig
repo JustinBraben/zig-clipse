@@ -49,11 +49,20 @@ pub fn main() !void {
 
     debug.print("cwd is {s}\n", .{cwd});
 
+    var num_i32_example: i32 = 0;
+    num_i32_example = 1;
+
     const num_u8_example: u8 = 2;
     const bool_example: bool = true;
     const float_f32_example: f32 = 2.0;
+    const string_example: []const u8 = "hello world";
+    //const slice_u64_example: []const u64 = &[_]u64{ 1, 2, 3 };
+    const ptr_i32_example: *i32 = &num_i32_example;
 
     try reflect.printObject(@TypeOf(num_u8_example), num_u8_example);
     try reflect.printObject(@TypeOf(bool_example), bool_example);
     try reflect.printObject(@TypeOf(float_f32_example), float_f32_example);
+    try reflect.printObject(@TypeOf(string_example), string_example);
+    //try reflect.printObject(@TypeOf(slice_u64_example), slice_u64_example);
+    try reflect.printObject(@TypeOf(ptr_i32_example), ptr_i32_example);
 }
