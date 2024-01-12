@@ -20,10 +20,6 @@ pub fn main() !void {
     };
     p2.age = 28;
 
-    // var buf: [255]u8 = undefined;
-    // var fbs = std.io.fixedBufferStream(&buf);
-    // const stream = fbs.writer();
-
     const allocator = std.heap.page_allocator;
     var buf = std.ArrayList(u8).init(allocator);
     defer buf.deinit();
@@ -31,6 +27,10 @@ pub fn main() !void {
     try serialize(buf.writer(), @TypeOf(p1), p1);
 
     print("Serial data : {s}\n", .{buf.items});
+
+    var stream = std.io.fixedBufferStream(buf.items);
+    const deserial_data = try deserializeAlloc(stream.reader(), @TypeOf(p1), allocator);
+    print("Deserialized data : {}\n", .{deserial_data});
 }
 
 fn printTypeName(comptime T: type) void {
@@ -54,10 +54,22 @@ pub fn serialize(stream: anytype, comptime T: type, value: T) @TypeOf(stream).Er
 
 pub fn deserialize(stream: anytype, comptime T: type) (@TypeOf(stream).Error || error{ UnexpectedData, EndOfStream })!T {
     comptime validateTopLevelType(T);
+    if (comptime requiresAllocationForDeserialize(T)) {
+        @compileError(@typeName(T) ++ " requires allocation to be deserialized. Use deserializeAlloc instead of deserialize!");
+    }
     return deserializeInternal(stream, T, null) catch |err| switch (err) {
         error.OutOfMemory => unreachable,
         else => |e| return e,
     };
+}
+
+pub fn deserializeAlloc(
+    stream: anytype,
+    comptime T: type,
+    allocator: ?std.mem.Allocator,
+) (@TypeOf(stream).Error || error{ UnexpectedData, OutOfMemory, EndOfStream })!T {
+    comptime validateTopLevelType(T);
+    return deserializeInternal(stream, T, allocator);
 }
 
 fn deserializeInternal(
@@ -65,8 +77,137 @@ fn deserializeInternal(
     comptime T: type,
     allocator: ?std.mem.Allocator,
 ) (@TypeOf(stream).Error || error{ UnexpectedData, OutOfMemory, EndOfStream })!T {
-    _ = allocator; // autofix
+    const type_hash = comptime computeTypeHash(T);
 
+    var ref_hash: [type_hash.len]u8 = undefined;
+    try stream.readNoEof(&ref_hash);
+    if (!std.mem.eql(u8, type_hash[0..], ref_hash[0..])) {
+        return error.UnexpectedData;
+    }
+
+    var result: T = undefined;
+    try recursiveDeserialize(stream, T, allocator, &result);
+    return result;
+}
+
+fn recursiveDeserialize(
+    stream: anytype,
+    comptime T: type,
+    allocator: ?std.mem.Allocator,
+    target: *T,
+) (@TypeOf(stream).Error || error{ UnexpectedData, OutOfMemory, EndOfStream })!void {
+    switch (@typeInfo(T)) {
+        // Primitives
+        .Void => target.* = {},
+
+        .Bool => target.* = (try stream.readByte()) != 0,
+
+        .Float => target.* = @bitCast(switch (T) {
+            f16 => try stream.readInt(u16, .little),
+            f32 => try stream.readInt(u32, .little),
+            f64 => try stream.readInt(u64, .little),
+            f80 => try stream.readInt(u80, .little),
+            f128 => try stream.readInt(u128, .little),
+            else => unreachable,
+        }),
+
+        .Int => target.* = if (T == usize)
+            std.math.cast(usize, try stream.readInt(u64, .little)) orelse return error.UnexpectedData
+        else
+            @as(AlignedInt(T), @truncate(try stream.readInt(AlignedInt(T), .little))),
+
+        .Pointer => |ptr| {
+            if (ptr.sentinel != null) @compileError("Sentinels are not supported yet!");
+            switch (ptr.size) {
+                .One => {
+                    const pointer = try allocator.?.create(ptr.child);
+                    errdefer allocator.?.destroy(pointer);
+
+                    try recursiveDeserialize(stream, ptr.child, allocator, pointer);
+
+                    target.* = pointer;
+                },
+
+                .Slice => {
+                    const length = std.math.cast(usize, try stream.readInt(u64, .little)) orelse return error.UnexpectedData;
+
+                    const slice = try allocator.?.alloc(ptr.child, length);
+                    errdefer allocator.?.free(slice);
+
+                    if (ptr.child == u8) {
+                        try stream.readNoEof(slice);
+                    } else {
+                        for (slice) |*item| {
+                            try recursiveDeserialize(stream, ptr.child, allocator, item);
+                        }
+                    }
+
+                    target.* = slice;
+                },
+
+                // Unsupported types
+                .C, .Many => unreachable,
+            }
+        },
+
+        .Array => |arr| {
+            if (arr.child == u8) {
+                try stream.readNoEof(target);
+            } else {
+                for (&target.*) |*item| {
+                    try recursiveDeserialize(stream, arr.child, allocator, item);
+                }
+            }
+        },
+
+        .Struct => |str| {
+            // Iterate over the fields in the struct and deserialize them
+
+            inline for (str.fields) |field| {
+                try recursiveDeserialize(stream, field.type, allocator, &@field(target.*, field.name));
+            }
+        },
+
+        // Unsupported types:
+        .Optional,
+        .ErrorUnion,
+        .ErrorSet,
+        .Enum,
+        .Union,
+        .Vector,
+        .NoReturn,
+        .Type,
+        .ComptimeFloat,
+        .ComptimeInt,
+        .Undefined,
+        .Null,
+        .Fn,
+        .Opaque,
+        .Frame,
+        .AnyFrame,
+        .EnumLiteral,
+        => unreachable,
+    }
+}
+
+/// Recursively looks through the type and determines if it requires allocation for deserialization
+/// If it finds a Pointer type, it will return true
+fn requiresAllocationForDeserialize(comptime T: type) bool {
+    switch (@typeInfo(T)) {
+        .Pointer => return true,
+        .Struct, .Union => {
+            inline for (comptime std.meta.fields(T)) |field| {
+                if (requiresAllocationForDeserialize(field.type)) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        .ErrorUnion => |err_union| {
+            return requiresAllocationForDeserialize(err_union.payload);
+        },
+        else => return false,
+    }
 }
 
 fn serializeRecursive(stream: anytype, comptime T: type, value: T) @TypeOf(stream).Error!void {
@@ -121,7 +262,26 @@ fn serializeRecursive(stream: anytype, comptime T: type, value: T) @TypeOf(strea
                 try serializeRecursive(stream, field.type, @field(value, field.name));
             }
         },
-        else => unreachable,
+
+        // Unsupported types:
+        .Optional,
+        .ErrorUnion,
+        .ErrorSet,
+        .Enum,
+        .Union,
+        .Vector,
+        .NoReturn,
+        .Type,
+        .ComptimeFloat,
+        .ComptimeInt,
+        .Undefined,
+        .Null,
+        .Fn,
+        .Opaque,
+        .Frame,
+        .AnyFrame,
+        .EnumLiteral,
+        => unreachable,
     }
 }
 
