@@ -1,6 +1,6 @@
 # Zig Reflection Library
 ![Zig](https://img.shields.io/badge/Zig-%23F7A41D.svg?style=for-the-badge&logo=zig&logoColor=white)
-[![Zig Version](https://img.shields.io/badge/zig-%3E%3Dnightly-orange))](https://ziglang.org/)
+[![Zig Version](https://img.shields.io/badge/zig-%3E%3Dnightly-orange)](https://ziglang.org/)
 [![Build Status](https://github.com/JustinBraben/zig-clipse/actions/workflows/CI.yaml/badge.svg)](https://github.com/JustinBraben/zig-clipse/actions/workflows/CI.yaml)
 
 ## Overview
