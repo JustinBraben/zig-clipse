@@ -80,4 +80,20 @@ pub fn main() !void {
     try reflect.printObject(@TypeOf(arr_u64_example), arr_u64_example);
     try reflect.printObject(@TypeOf(arr_u8_example), arr_u8_example);
     try reflect.printObject(@TypeOf(p1), p1);
+
+    if (isStruct(num_u8_example)) {
+        debug.print("num_u8_example is a struct\n", .{});
+    } else {
+        debug.print("num_u8_example is not a struct\n", .{});
+    }
+
+    if (isStruct(p1)) {
+        debug.print("p1 is a struct\n", .{});
+    } else {
+        debug.print("p1 is not a struct\n", .{});
+    }
+}
+
+fn isStruct(object: anytype) bool {
+    return @typeInfo(@TypeOf(object)) == .Struct;
 }
