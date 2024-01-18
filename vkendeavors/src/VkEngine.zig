@@ -3,7 +3,10 @@ const c = @import("clibs.zig");
 
 pub const VkEngine = struct {
     allocator: std.mem.Allocator = undefined,
+
     window: *c.SDL_Window = undefined,
+
+    is_initialized: bool = false,
 
     pub fn init(allocator: std.mem.Allocator) !VkEngine {
         // Init SDL
@@ -20,7 +23,32 @@ pub const VkEngine = struct {
 
         _ = c.SDL_ShowWindow(window);
 
-        return VkEngine{ .allocator = allocator, .window = window };
+        const is_initialized = true;
+
+        return VkEngine{ .allocator = allocator, .window = window, .is_initialized = is_initialized };
+    }
+
+    pub fn run(self: *VkEngine) void {
+        _ = self; // autofix
+        var quit = false;
+        var event: c.SDL_Event = undefined;
+        while (!quit) {
+            while (c.SDL_PollEvent(&event) != 0) {
+                if (event.type == c.SDL_EVENT_QUIT) {
+                    quit = true;
+                } else if (event.type == c.SDL_EVENT_KEY_DOWN) {
+                    switch (event.key.keysym.scancode) {
+                        c.SDL_SCANCODE_SPACE => {
+                            std.debug.print("Space pressed\n", .{});
+                        },
+                        c.SDL_SCANCODE_ESCAPE => {
+                            quit = true;
+                        },
+                        else => {},
+                    }
+                }
+            }
+        }
     }
 
     pub fn deinit(self: *VkEngine) void {

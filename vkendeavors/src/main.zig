@@ -9,4 +9,6 @@ pub fn main() !void {
 
     var engine = try VkEngine.init(gpa.allocator());
     defer engine.deinit();
+
+    engine.run();
 }
