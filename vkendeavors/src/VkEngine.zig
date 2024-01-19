@@ -1,10 +1,16 @@
 const std = @import("std");
 const c = @import("clibs.zig");
 
+const vki = @import("VkInitializers.zig");
+
+const log = std.log.scoped(.vulkan_engine);
+
 pub const VkEngine = struct {
     allocator: std.mem.Allocator = undefined,
 
     window: *c.SDL_Window = undefined,
+
+    frame_number: u64 = 0,
 
     is_initialized: bool = false,
 
@@ -19,13 +25,18 @@ pub const VkEngine = struct {
 
         const window_extent = c.VkExtent2D{ .width = 1600, .height = 900 };
 
-        const window = c.SDL_CreateWindow("Vulkan Engine", window_extent.width, window_extent.width, window_flags) orelse @panic("Failed to create SDL window");
+        const window = c.SDL_CreateWindow("Vulkan Engine", window_extent.width, window_extent.height, window_flags) orelse @panic("Failed to create SDL window");
 
         _ = c.SDL_ShowWindow(window);
 
-        const is_initialized = true;
+        // init_instance();
 
-        return VkEngine{ .allocator = allocator, .window = window, .is_initialized = is_initialized };
+        return VkEngine{ .allocator = allocator, .window = window, .frame_number = 0, .is_initialized = true };
+    }
+
+    pub fn draw(self: *VkEngine) void {
+        // TODO: draw function
+        _ = self; // autofix
     }
 
     pub fn run(self: *VkEngine) void {
@@ -53,5 +64,9 @@ pub const VkEngine = struct {
 
     pub fn deinit(self: *VkEngine) void {
         c.SDL_DestroyWindow(self.window);
+    }
+
+    fn init_instance(self: *VkEngine) void {
+        _ = self; // autofix
     }
 };
