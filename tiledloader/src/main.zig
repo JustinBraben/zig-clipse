@@ -1,6 +1,8 @@
 const std = @import("std");
 const App = @import("app.zig").App;
 
+const Xml = @import("xml.zig").Xml;
+
 const print = std.debug.print;
 
 pub fn main() !void {
@@ -28,11 +30,10 @@ pub fn main() !void {
         //print("{s}\n", .{line});
 
         // TODO: Tokenize the contents of the .tmx file by '<' and '>' characters
-        var line_tokens = std.mem.tokenizeAny(u8, line, "<? >");
-        print("type : {s}\n", .{line_tokens.peek().?});
+        var line_tokens = std.mem.tokenizeAny(u8, line, "<>\n");
+
         while (line_tokens.next()) |token| {
-            _ = token; // autofix
-            //print("{s}\n", .{token});
+            print("{s}\n", .{token});
         }
     }
 
