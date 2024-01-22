@@ -1,7 +1,8 @@
 const std = @import("std");
 const App = @import("app.zig").App;
 
-const Xml = @import("xml.zig").Xml;
+const xml_document = @import("xml.zig").xml_document;
+const xml_parse_result = @import("xml.zig").xml_parse_result;
 
 const print = std.debug.print;
 
@@ -13,29 +14,34 @@ pub fn main() !void {
     const gpa = gpa_allocator.allocator();
 
     // TODO: read the contents of a .tmx file (such as "assets/demo.tmx") and print it out
-    const filename = "assets/demo.tmx";
-    const file = try std.fs.cwd().openFile(filename, .{});
-    defer file.close();
+    var doc = try xml_document.init(gpa, "assets/demo.tmx");
+    defer doc.deinit();
 
-    const file_contents = try file.reader().readAllAlloc(gpa, 2048);
-    defer gpa.free(file_contents);
+    print("{s}\n", .{doc.contents});
+
+    // const filename = "assets/demo.tmx";
+    // const file = try std.fs.cwd().openFile(filename, .{});
+    // defer file.close();
+
+    // const file_contents = try file.reader().readAllAlloc(gpa, 2048);
+    // defer gpa.free(file_contents);
 
     // Debug print the contents of the file
-    //print("{s}\n", .{file_contents});
+    // print("{s}\n", .{file_contents});
 
     // TODO: Tokenize the contents of the .tmx file by '\n' character
-    var lines = std.mem.tokenizeScalar(u8, file_contents, '\n');
+    // var lines = std.mem.tokenizeScalar(u8, file_contents, '\n');
 
-    while (lines.next()) |line| {
-        //print("{s}\n", .{line});
+    // while (lines.next()) |line| {
+    //     //print("{s}\n", .{line});
 
-        // TODO: Tokenize the contents of the .tmx file by '<' and '>' characters
-        var line_tokens = std.mem.tokenizeAny(u8, line, "<>\n");
+    //     // TODO: Tokenize the contents of the .tmx file by '<' and '>' characters
+    //     var line_tokens = std.mem.tokenizeAny(u8, line, "<>\n");
 
-        while (line_tokens.next()) |token| {
-            print("{s}\n", .{token});
-        }
-    }
+    //     while (line_tokens.next()) |token| {
+    //         print("{s}\n", .{token});
+    //     }
+    // }
 
     // TODO: Create a Map struct that can hold the contents of a .tmx file
 
