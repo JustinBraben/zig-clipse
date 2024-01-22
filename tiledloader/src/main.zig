@@ -3,6 +3,7 @@ const App = @import("app.zig").App;
 
 const xml_document = @import("xml.zig").xml_document;
 const xml_parse_result = @import("xml.zig").xml_parse_result;
+const xml_test = @import("xml_test.zig").Xml;
 
 const print = std.debug.print;
 
@@ -21,18 +22,36 @@ pub fn main() !void {
     const result = try doc.load_file(gpa, "assets/demo.tmx");
     defer doc.deinit();
 
-    print("{s}\n", .{doc.contents});
+    //print("{s}\n", .{doc.contents});
     print("encoding : {any}, status : {any}\n", .{ result.encoding, result.status });
 
-    // const filename = "assets/demo.tmx";
-    // const file = try std.fs.cwd().openFile(filename, .{});
-    // defer file.close();
+    var xml: xml_test = .{ .bytes = doc.contents };
+    var token = xml.next();
 
-    // const file_contents = try file.reader().readAllAlloc(gpa, 2048);
-    // defer gpa.free(file_contents);
+    while (token.tag != .invalid and token.tag != .eof) {
+        switch (token.tag) {
+            .invalid => unreachable,
+            .eof => unreachable,
+            .doctype => {
+                print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
+            },
+            .tag_open => {},
+            .tag_close => {},
+            .tag_close_empty => {},
+            .attr_key => {},
+            .attr_value => {},
+            .content => {},
+        }
+        //print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
+        token = xml.next();
+    }
 
-    // Debug print the contents of the file
-    // print("{s}\n", .{file_contents});
+    //print("{s}\n", .{xml.line});
+
+    // print("doctype : {any}\n", .{xml.next().tag});
+    // print("{any}\n", .{xml.next().tag});
+
+    // TODO: Get iterator for doc.child
 
     // TODO: Tokenize the contents of the .tmx file by '\n' character
     // var lines = std.mem.tokenizeScalar(u8, file_contents, '\n');

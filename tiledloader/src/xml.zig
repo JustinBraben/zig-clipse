@@ -79,6 +79,29 @@ pub const xml_document = struct {
     }
 };
 
+pub const xml_node = struct {
+    allocator: Allocator,
+    document: *xml_document,
+    parent: *xml_node,
+    first_child: *xml_node,
+    last_child: *xml_node,
+    prev_sibling: *xml_node,
+    next_sibling: *xml_node,
+    name: []const u8,
+    value: []const u8,
+    attributes: []xml_attribute,
+};
+
+pub const xml_attribute = struct {
+    name: []const u8,
+    value: []const u8,
+};
+
+pub const xml_content = union(enum) {
+    char_data: []const u8,
+    comment: []const u8,
+};
+
 pub const xml_parse_result = struct {
     status: xml_parse_status,
     encoding: xml_encoding,
