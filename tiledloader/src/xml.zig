@@ -10,37 +10,16 @@ pub const xml_document = struct {
     file_path: []const u8,
     contents: []const u8,
 
-    pub fn init(allocator: Allocator, filePath: []const u8) !xml_document {
-
-        // TODO: read the contents of a .tmx file (such as "assets/demo.tmx") and print it out
-        const file = try std.fs.cwd().openFile(filePath, .{});
-        defer file.close();
-
-        const file_contents = try file.reader().readAllAlloc(allocator, 2048);
-
-        return .{
-            .allocator = allocator,
-            .file_path = filePath,
-            .contents = file_contents,
-        };
-    }
-
     pub fn deinit(self: *xml_document) void {
         self.allocator.free(self.contents);
     }
-};
 
-pub const xml_parse_result = struct {
-    status: xml_parse_status,
-    encoding: xml_encoding,
-
-    pub fn load_file(doc: *xml_document) xml_parse_result {
-
-        // get file size
-        var file = try fs.cwd().openFile(doc.file_path, .{});
+    pub fn load_file(self: *xml_document, allocator: Allocator, filePath: []const u8) !xml_parse_result {
+        const file = try std.fs.cwd().openFile(filePath, .{});
         defer file.close();
 
-        const file_size = try file.stat().size;
+        const file_stat = try file.stat();
+        const file_size = file_stat.size;
         const size_status: xml_parse_status = parse_file_size(file_size);
 
         if (size_status != xml_parse_status.success) {
@@ -50,7 +29,13 @@ pub const xml_parse_result = struct {
             };
         }
 
-        const real_encoding = get_buffer_encoding(doc.contents, file_size);
+        const file_contents = try file.reader().readAllAlloc(allocator, file_size);
+
+        const real_encoding = get_buffer_encoding(file_contents, file_size);
+
+        self.allocator = allocator;
+        self.file_path = filePath;
+        self.contents = file_contents;
 
         return .{
             .status = xml_parse_status.success,
@@ -92,6 +77,11 @@ pub const xml_parse_result = struct {
 
         return xml_encoding.utf8;
     }
+};
+
+pub const xml_parse_result = struct {
+    status: xml_parse_status,
+    encoding: xml_encoding,
 };
 
 pub const xml_parse_status = enum {

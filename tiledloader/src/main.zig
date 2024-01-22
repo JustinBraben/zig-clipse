@@ -14,10 +14,15 @@ pub fn main() !void {
     const gpa = gpa_allocator.allocator();
 
     // TODO: read the contents of a .tmx file (such as "assets/demo.tmx") and print it out
-    var doc = try xml_document.init(gpa, "assets/demo.tmx");
+    //var doc = try xml_document.init(gpa, "assets/demo.tmx");
+    //defer doc.deinit();
+
+    var doc: xml_document = undefined;
+    const result = try doc.load_file(gpa, "assets/demo.tmx");
     defer doc.deinit();
 
     print("{s}\n", .{doc.contents});
+    print("encoding : {any}, status : {any}\n", .{ result.encoding, result.status });
 
     // const filename = "assets/demo.tmx";
     // const file = try std.fs.cwd().openFile(filename, .{});
