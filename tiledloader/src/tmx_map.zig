@@ -1,4 +1,5 @@
 const std = @import("std");
+const xml = @import("xml.zig");
 
 pub const Version = struct {
     major: u16 = 0,
@@ -35,6 +36,7 @@ pub const StaggerIndex = enum {
 };
 
 pub const Map = struct {
+    allocator: std.mem.Allocator,
     version: ?Version = null,
     class: ?[]const u8 = null,
     orientation: ?Orientation = null,
@@ -62,15 +64,61 @@ pub const Map = struct {
     //template_objects: std.AutoHashMap(u32, Object),
     //template_tilesets: std.AutoHashMap(u32, Tileset),
 
-    pub fn load_from_string(self: *Map, tmxContents: []const u8, tmxPath: []const u8) !Map {
-        _ = tmxContents;
+    pub fn load_from_string(self: *Map, backing_allocator: std.mem.Allocator, tmxContents: []const u8, tmxPath: []const u8) !Map {
         self.reset();
+
+        // TODO: open doc
+        const doc = xml.parse(backing_allocator, tmxContents) catch |err| switch (err) {
+            error.InvalidDocument,
+            error.UnexpectedEof,
+            error.UnexpectedCharacter,
+            error.IllegalCharacter,
+            error.InvalidEntity,
+            error.InvalidName,
+            error.InvalidStandaloneValue,
+            error.NonMatchingClosingTag,
+            error.UnclosedComment,
+            error.UnclosedValue,
+            => return error.InvalidXml,
+            error.OutOfMemory => return error.OutOfMemory,
+        };
 
         // TODO: make sure we have consistent path seperators
         self.working_dir = tmxPath;
 
         // Find the map node and bail if DNE
+        const map_node = doc.root;
+        _ = map_node; // autofix
 
+        return .{
+            .allocator = backing_allocator,
+            .version = self.version,
+            .class = self.class,
+            .orientation = self.orientation,
+            .renderorder = self.renderorder,
+            .infinite = self.infinite,
+
+            //.tile_count = self.tile_count,
+            //.tile_size = self.tile_size,
+
+            //.hex_side_length = self.hex_side_length,
+            .stagger_axis = self.stagger_axis,
+            .stagger_index = self.stagger_index,
+
+            //.parallax_origin = self.parallax_origin,
+
+            //.background_color = self.background_color,
+
+            .working_dir = self.working_dir,
+
+            //.tilesets = self.tilesets,
+            //.layers = self.layers,
+            //.properties = self.properties,
+            //.anim_tiles = self.anim_tiles,
+
+            //.template_objects = self.template_objects,
+            //.template_tilesets = self.template_tilesets,
+        };
     }
 
     pub fn reset(self: *Map) void {

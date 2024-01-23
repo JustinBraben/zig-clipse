@@ -1,77 +1,42 @@
 const std = @import("std");
 const App = @import("app.zig").App;
 
-const xml_document = @import("xml.zig").xml_document;
-const xml_parse_result = @import("xml.zig").xml_parse_result;
-const xml_test = @import("xml_test.zig").Xml;
+const xml = @import("xml.zig");
+const Map = @import("tmx_map.zig").Map;
 
 const print = std.debug.print;
 
 pub fn main() !void {
+    const stderr = std.io.getStdErr();
+
     print("\n", .{});
 
-    var gpa_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.testing.expect(gpa_allocator.deinit() != .leak) catch @panic("memory leak");
-    const gpa = gpa_allocator.allocator();
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
     // TODO: read the contents of a .tmx file (such as "assets/demo.tmx") and print it out
     //var doc = try xml_document.init(gpa, "assets/demo.tmx");
     //defer doc.deinit();
 
-    var doc: xml_document = undefined;
-    const result = try doc.load_file(gpa, "assets/demo.tmx");
-    defer doc.deinit();
+    const cwd = std.fs.cwd();
+    const xml_path = "assets/demo.tmx";
+    const xml_src = cwd.readFileAlloc(allocator, xml_path, std.math.maxInt(usize)) catch |err| {
+        try stderr.writer().print("Error: Failed to open input file '{s}' ({s})\n", .{ xml_path, @errorName(err) });
+        return;
+    };
 
-    //print("{s}\n", .{doc.contents});
-    print("encoding : {any}, status : {any}\n", .{ result.encoding, result.status });
+    const doc = try xml.parse(allocator, xml_src);
+    print("xml_decl tag: {s}\n", .{doc.xml_decl.?.tag});
+    print("doc root tag: {s}\n", .{doc.root.tag});
+    print("elements in root: {any}\n", .{doc.root.elements()});
+    const version_num = doc.root.getAttribute("version").?;
+    print("version: {s}\n", .{version_num});
+    const tileset_elem = doc.root.findChildByTag("tileset").?;
+    print("tileset_elem: {s}\n", .{tileset_elem.tag});
 
-    var xml: xml_test = .{ .bytes = doc.contents };
-    var token = xml.next();
-
-    while (token.tag != .invalid and token.tag != .eof) {
-        switch (token.tag) {
-            .invalid => unreachable,
-            .eof => unreachable,
-            .doctype => {
-                print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
-            },
-            .tag_open => {
-                print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
-            },
-            .tag_close => {
-                print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
-            },
-            .tag_close_empty => {
-                print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
-            },
-            .attr_key => {},
-            .attr_value => {},
-            .content => {},
-        }
-        //print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
-        token = xml.next();
-    }
-
-    //print("{s}\n", .{xml.line});
-
-    // print("doctype : {any}\n", .{xml.next().tag});
-    // print("{any}\n", .{xml.next().tag});
-
-    // TODO: Get iterator for doc.child
-
-    // TODO: Tokenize the contents of the .tmx file by '\n' character
-    // var lines = std.mem.tokenizeScalar(u8, file_contents, '\n');
-
-    // while (lines.next()) |line| {
-    //     //print("{s}\n", .{line});
-
-    //     // TODO: Tokenize the contents of the .tmx file by '<' and '>' characters
-    //     var line_tokens = std.mem.tokenizeAny(u8, line, "<>\n");
-
-    //     while (line_tokens.next()) |token| {
-    //         print("{s}\n", .{token});
-    //     }
-    // }
+    var map: Map = undefined;
+    map = try map.load_from_string(allocator, xml_src, xml_path);
 
     // TODO: Create a Map struct that can hold the contents of a .tmx file
 
