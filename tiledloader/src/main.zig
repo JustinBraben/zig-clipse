@@ -35,8 +35,12 @@ pub fn main() !void {
             .doctype => {
                 print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
             },
-            .tag_open => {},
-            .tag_close => {},
+            .tag_open => {
+                print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
+            },
+            .tag_close => {
+                print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
+            },
             .tag_close_empty => {},
             .attr_key => {},
             .attr_value => {},
