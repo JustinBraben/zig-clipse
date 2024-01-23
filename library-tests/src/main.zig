@@ -11,7 +11,6 @@ const mem = std.mem;
 const process = std.process;
 
 const c = @import("clibs.zig");
-const pugi = c.pugixml;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
