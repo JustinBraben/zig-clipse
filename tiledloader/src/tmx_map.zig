@@ -1,4 +1,5 @@
 const std = @import("std");
+const xml = @import("xml.zig");
 
 pub const Version = struct {
     major: u16 = 0,
@@ -15,10 +16,10 @@ pub const Orientation = enum {
 };
 
 pub const RenderOrder = enum {
-    RightDown,
-    RightUp,
-    LeftDown,
-    LeftUp,
+    @"right-down",
+    @"right-up",
+    @"left-down",
+    @"left-up",
     None,
 };
 
@@ -35,8 +36,9 @@ pub const StaggerIndex = enum {
 };
 
 pub const Map = struct {
+    allocator: std.mem.Allocator,
     version: ?Version = null,
-    class: ?[]const u8 = null,
+    //class: ?[]const u8 = null,
     orientation: ?Orientation = null,
     renderorder: ?RenderOrder = null,
     infinite: bool = false,
@@ -62,20 +64,120 @@ pub const Map = struct {
     //template_objects: std.AutoHashMap(u32, Object),
     //template_tilesets: std.AutoHashMap(u32, Tileset),
 
-    pub fn load_from_string(self: *Map, tmxContents: []const u8, tmxPath: []const u8) !Map {
-        _ = tmxContents;
+    pub fn load_from_string(self: *Map, backing_allocator: std.mem.Allocator, tmxContents: []const u8, tmxPath: []const u8) !Map {
         self.reset();
 
+        // TODO: open doc
+        const doc = xml.parse(backing_allocator, tmxContents) catch |err| switch (err) {
+            error.InvalidDocument,
+            error.UnexpectedEof,
+            error.UnexpectedCharacter,
+            error.IllegalCharacter,
+            error.InvalidEntity,
+            error.InvalidName,
+            error.InvalidStandaloneValue,
+            error.NonMatchingClosingTag,
+            error.UnclosedComment,
+            error.UnclosedValue,
+            => return error.InvalidXml,
+            error.OutOfMemory => return error.OutOfMemory,
+        };
+
         // TODO: make sure we have consistent path seperators
-        self.working_dir = tmxPath;
+        self.working_dir = try std.fs.realpathAlloc(backing_allocator, tmxPath);
 
         // Find the map node and bail if DNE
+        const map_node = doc.root;
+        if (!std.mem.eql(u8, map_node.tag, "map")) {
+            return error.InvalidXml;
+        }
 
+        return .{
+            .allocator = backing_allocator,
+            .version = self.version,
+            //.class = self.class,
+            .orientation = self.orientation,
+            .renderorder = self.renderorder,
+            .infinite = self.infinite,
+
+            //.tile_count = self.tile_count,
+            //.tile_size = self.tile_size,
+
+            //.hex_side_length = self.hex_side_length,
+            .stagger_axis = self.stagger_axis,
+            .stagger_index = self.stagger_index,
+
+            //.parallax_origin = self.parallax_origin,
+
+            //.background_color = self.background_color,
+
+            .working_dir = self.working_dir,
+
+            //.tilesets = self.tilesets,
+            //.layers = self.layers,
+            //.properties = self.properties,
+            //.anim_tiles = self.anim_tiles,
+
+            //.template_objects = self.template_objects,
+            //.template_tilesets = self.template_tilesets,
+        };
+    }
+
+    fn parse_map_node(backing_allocator: std.mem.Allocator, map_node: *xml.Element) !Map {
+
+        // parse map attributes
+        const map_version = map_node.getAttribute("version").?;
+        // if (std.mem.eql(u8, map_version, null)) {
+        //     return error.InvalidXml;
+        // }
+
+        const map_orientation = map_node.getAttribute("orientation").?;
+        const map_orientation_enum = std.meta.stringToEnum(Orientation, map_orientation).?;
+
+        const map_renderorder = map_node.getAttribute("renderorder").?;
+        const map_renderorder_enum = std.meta.stringToEnum(RenderOrder, map_renderorder).?;
+
+        const map_infinite = map_node.getAttribute("infinite").?;
+        var map_infinite_bool = false;
+        if (std.mem.eql(u8, map_infinite, "1")) {
+            map_infinite_bool = true;
+        }
+
+        const attribs = map_node.attributes;
+        var index: u8 = 0;
+        while (index < attribs.len) : (index += 1) {
+            const attrib = attribs[index];
+            std.debug.print("{s}: {s}\n", .{ attrib.name, attrib.value });
+        }
+
+        return .{
+            .allocator = backing_allocator,
+            .version = .{
+                .major = std.mem.splitScalar(u8, map_version, ".").first(),
+                .minor = std.mem.splitScalar(u8, map_version, ".").next().?,
+            },
+            //.class = self.class,
+            .orientation = switch (map_orientation_enum) {
+                .Orthogonal => .Orthogonal,
+                .Isometric => .Isometric,
+                .Staggered => .Staggered,
+                .Hexagonal => .Hexagonal,
+                else => .None,
+            },
+            .renderorder = switch (map_renderorder_enum) {
+                .@"right-down" => .@"right-down",
+                .@"right-up" => .@"right-up",
+                .@"left-down" => .@"left-down",
+                .@"left-up" => .@"left-up",
+                else => .None,
+            },
+            .infinite = map_infinite_bool,
+        };
     }
 
     pub fn reset(self: *Map) void {
         self.version = null;
-        self.class = null;
+        //self.class = null;
         self.orientation = null;
         self.renderorder = null;
         self.infinite = false;

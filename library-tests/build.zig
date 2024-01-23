@@ -40,19 +40,19 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 
     // Add pugixml as a static library
-    const pugixml_lib = b.addStaticLibrary(.{
-        .name = "pugixml",
-        .target = target,
-        .optimize = optimize,
-    });
-    pugixml_lib.addIncludePath(.{ .path = "thirdparty/pugixml/src/" });
-    pugixml_lib.linkLibCpp();
-    pugixml_lib.addCSourceFiles(.{
-        .files = &.{
-            "thirdparty/pugixml/src/pugixml.cpp",
-        },
-    });
-    exe.linkLibrary(pugixml_lib);
+    // const pugixml_lib = b.addStaticLibrary(.{
+    //     .name = "pugixml",
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+    // pugixml_lib.addIncludePath(.{ .path = "thirdparty/pugixml/src/" });
+    // pugixml_lib.linkLibCpp();
+    // pugixml_lib.addCSourceFiles(.{
+    //     .files = &.{
+    //         "thirdparty/pugixml/src/pugixml.cpp",
+    //     },
+    // });
+    // exe.linkLibrary(pugixml_lib);
 
     // This *creates* a Run step in the build graph, to be executed when another
     // step is evaluated that depends on it. The next line below will establish
