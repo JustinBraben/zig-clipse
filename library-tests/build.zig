@@ -28,36 +28,31 @@ pub fn build(b: *std.Build) void {
         exe.linkLibrary(sdl_dep.artifact("SDL2"));
     }
 
-    // Good practice with reflection
-    // std.debug.print("Type of root module: {}\n", .{@TypeOf(exe.root_module)});
-    // std.debug.print("exe root module : {}\n", .{exe.root_module});
-    // inline for (std.meta.fields(@TypeOf(exe.root_module))) |field| {
-    //     std.debug.print("Field Name \t:\t {s}\n", .{field.name});
-    //     std.debug.print("Field type \t:\t {}\n", .{field.type});
-    //     std.debug.print("Field defval \t:\t {any}\n", .{field.default_value});
-    //     std.debug.print("\n", .{});
-    // }
+    // exe.linkSystemLibrary("pugixml");
+    // exe.addIncludePath(.{ .path = "thirdparty/pugixml/src/" });
+    // exe.addCSourceFiles(.{
+    //     .files = &.{
+    //         "thirdparty/pugixml/src/pugixml.cpp",
+    //     },
+    // });
+    // exe.linkLibCpp();
 
-    // inline for (std.meta.fields(std.Build.Dependency)) |field| {
-    //     std.debug.print("{}\n", .{field});
-    // }
-
-    // for (std.meta.fields(b.available_deps)) |field| {
-    //     std.debug.print("Field : {}", .{field});
-    // }
-
-    // for (b.available_deps) |dep_one| {
-    //     std.debug.print("dep \t: {any}\n", .{dep_one});
-    //     std.debug.print("val : {}\n", .{dep_one.ptr});
-    // }
-
-    // const hell = [_]u8{ 49, 50, 50, 48, 48, 54, 102, 49, 100, 50, 53, 100, 100, 49, 49, 50, 54, 48, 53, 97, 100, 48, 48, 57, 50, 57, 102, 48, 53, 101, 48, 53, 100, 97, 56, 52, 52, 100, 101, 99, 100, 52, 98, 99, 50, 53, 57, 57, 54, 57, 57, 56, 56, 49, 52, 55, 48, 52, 51, 52, 52, 98, 101, 56, 55, 97, 48, 57 };
-    // std.debug.print("output : {s}\n", .{hell});
-
-    // This declares intent for the executable to be installed into the
-    // standard location when the user invokes the "install" step (the default
-    // step when running `zig build`).
     b.installArtifact(exe);
+
+    // Add pugixml as a static library
+    const pugixml_lib = b.addStaticLibrary(.{
+        .name = "pugixml",
+        .target = target,
+        .optimize = optimize,
+    });
+    pugixml_lib.addIncludePath(.{ .path = "thirdparty/pugixml/src/" });
+    pugixml_lib.linkLibCpp();
+    pugixml_lib.addCSourceFiles(.{
+        .files = &.{
+            "thirdparty/pugixml/src/pugixml.cpp",
+        },
+    });
+    exe.linkLibrary(pugixml_lib);
 
     // This *creates* a Run step in the build graph, to be executed when another
     // step is evaluated that depends on it. The next line below will establish

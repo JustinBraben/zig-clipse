@@ -41,7 +41,9 @@ pub fn main() !void {
             .tag_close => {
                 print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
             },
-            .tag_close_empty => {},
+            .tag_close_empty => {
+                print("{s}: {s}\n", .{ @tagName(token.tag), token.bytes });
+            },
             .attr_key => {},
             .attr_value => {},
             .content => {},

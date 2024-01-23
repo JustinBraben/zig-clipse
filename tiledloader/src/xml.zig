@@ -80,16 +80,9 @@ pub const xml_document = struct {
 };
 
 pub const xml_node = struct {
-    allocator: Allocator,
-    document: *xml_document,
-    parent: *xml_node,
-    first_child: *xml_node,
-    last_child: *xml_node,
-    prev_sibling: *xml_node,
-    next_sibling: *xml_node,
-    name: []const u8,
-    value: []const u8,
-    attributes: []xml_attribute,
+    tag: []const u8,
+    inner_text: []const u8,
+    parent: ?*xml_node,
 };
 
 pub const xml_attribute = struct {
