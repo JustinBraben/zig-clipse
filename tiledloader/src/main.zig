@@ -27,16 +27,26 @@ pub fn main() !void {
     };
 
     const doc = try xml.parse(allocator, xml_src);
-    print("xml_decl tag: {s}\n", .{doc.xml_decl.?.tag});
-    print("doc root tag: {s}\n", .{doc.root.tag});
-    print("elements in root: {any}\n", .{doc.root.elements()});
-    const version_num = doc.root.getAttribute("version").?;
-    print("version: {s}\n", .{version_num});
-    const tileset_elem = doc.root.findChildByTag("tileset").?;
-    print("tileset_elem: {s}\n", .{tileset_elem.tag});
+    // print("xml_decl tag: {s}\n", .{doc.xml_decl.?.tag});
+    // print("doc root tag: {s}\n", .{doc.root.tag});
+    // print("elements in root: {any}\n", .{doc.root.elements()});
+    // const version_num = doc.root.getAttribute("version").?;
+    // print("version: {s}\n", .{version_num});
+    // const tileset_elem = doc.root.findChildByTag("tileset").?;
+    // print("tileset_elem: {s}\n", .{tileset_elem.tag});
+
+    const attribs = doc.root.attributes;
+    var index: u8 = 0;
+    while (index < attribs.len) : (index += 1) {
+        const attrib = attribs[index];
+        print("{s}: {s}\n", .{ attrib.name, attrib.value });
+    }
+
+    //print("{s} - {s}\n", .{ doc.root.getAttribute("renderorder").? });
 
     var map: Map = undefined;
     map = try map.load_from_string(allocator, xml_src, xml_path);
+    print("map working dir : {?s}\n", .{map.working_dir});
 
     // TODO: Create a Map struct that can hold the contents of a .tmx file
 
