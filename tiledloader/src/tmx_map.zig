@@ -92,50 +92,97 @@ pub const Map = struct {
             return error.InvalidXml;
         }
 
-        return .{
-            .allocator = backing_allocator,
-            .version = self.version,
-            //.class = self.class,
-            .orientation = self.orientation,
-            .renderorder = self.renderorder,
-            .infinite = self.infinite,
+        return try parse_map_node(backing_allocator, map_node, self.working_dir);
 
-            //.tile_count = self.tile_count,
-            //.tile_size = self.tile_size,
+        // return .{
+        //     .allocator = backing_allocator,
+        //     .version = self.version,
+        //     //.class = self.class,
+        //     .orientation = self.orientation,
+        //     .renderorder = self.renderorder,
+        //     .infinite = self.infinite,
 
-            //.hex_side_length = self.hex_side_length,
-            .stagger_axis = self.stagger_axis,
-            .stagger_index = self.stagger_index,
+        //     //.tile_count = self.tile_count,
+        //     //.tile_size = self.tile_size,
 
-            //.parallax_origin = self.parallax_origin,
+        //     //.hex_side_length = self.hex_side_length,
+        //     .stagger_axis = self.stagger_axis,
+        //     .stagger_index = self.stagger_index,
 
-            //.background_color = self.background_color,
+        //     //.parallax_origin = self.parallax_origin,
 
-            .working_dir = self.working_dir,
+        //     //.background_color = self.background_color,
 
-            //.tilesets = self.tilesets,
-            //.layers = self.layers,
-            //.properties = self.properties,
-            //.anim_tiles = self.anim_tiles,
+        //     .working_dir = self.working_dir,
 
-            //.template_objects = self.template_objects,
-            //.template_tilesets = self.template_tilesets,
-        };
+        //     //.tilesets = self.tilesets,
+        //     //.layers = self.layers,
+        //     //.properties = self.properties,
+        //     //.anim_tiles = self.anim_tiles,
+
+        //     //.template_objects = self.template_objects,
+        //     //.template_tilesets = self.template_tilesets,
+        // };
     }
 
-    fn parse_map_node(backing_allocator: std.mem.Allocator, map_node: *xml.Element) !Map {
+    fn parse_map_node(backing_allocator: std.mem.Allocator, map_node: *xml.Element, workingDir: ?[]const u8) !Map {
 
         // parse map attributes
-        const map_version = map_node.getAttribute("version").?;
-        // if (std.mem.eql(u8, map_version, null)) {
-        //     return error.InvalidXml;
-        // }
+        var map_version: []const u8 = undefined;
+        map_version = map_node.getAttribute("version").?;
+
+        std.debug.print("map version : {?s}\n", .{map_version});
+        var split_tokens = std.mem.tokenizeScalar(u8, map_version, '.');
+        const major = split_tokens.next().?;
+        const minor = split_tokens.next().?;
+        const major_int = std.fmt.parseInt(u16, major, 10) catch |err| switch (err) {
+            error.InvalidCharacter => return error.InvalidXml,
+            error.Overflow => return error.InvalidXml,
+        };
+        const minor_int = std.fmt.parseInt(u16, minor, 10) catch |err| switch (err) {
+            error.InvalidCharacter => return error.InvalidXml,
+            error.Overflow => return error.InvalidXml,
+        };
 
         const map_orientation = map_node.getAttribute("orientation").?;
-        const map_orientation_enum = std.meta.stringToEnum(Orientation, map_orientation).?;
+        var map_orientation_enum: Orientation = undefined;
+
+        // TODO: find a way to use stringToEnum with optional values
+        // const orientation_case = std.meta.stringToEnum(Orientation, map_orientation);
+        // _ = orientation_case; // autofix
+        // map_orientation_enum = switch (orientation_case) {
+        //     .Orthogonal => .Orthogonal,
+        //     .Isometric => .Isometric,
+        //     .Staggered => .Staggered,
+        //     .Hexagonal => .Hexagonal,
+        //     else => .None,
+        // };
+
+        if (std.mem.eql(u8, map_orientation, "orthogonal")) {
+            map_orientation_enum = .Orthogonal;
+        } else if (std.mem.eql(u8, map_orientation, "isometric")) {
+            map_orientation_enum = .Isometric;
+        } else if (std.mem.eql(u8, map_orientation, "staggered")) {
+            map_orientation_enum = .Staggered;
+        } else if (std.mem.eql(u8, map_orientation, "hexagonal")) {
+            map_orientation_enum = .Hexagonal;
+        } else {
+            map_orientation_enum = .None;
+        }
 
         const map_renderorder = map_node.getAttribute("renderorder").?;
-        const map_renderorder_enum = std.meta.stringToEnum(RenderOrder, map_renderorder).?;
+        var map_renderorder_enum: RenderOrder = undefined;
+        if (std.mem.eql(u8, map_renderorder, "right-down")) {
+            map_renderorder_enum = .@"right-down";
+        } else if (std.mem.eql(u8, map_renderorder, "right-up")) {
+            map_renderorder_enum = .@"right-up";
+        } else if (std.mem.eql(u8, map_renderorder, "left-down")) {
+            map_renderorder_enum = .@"left-down";
+        } else if (std.mem.eql(u8, map_renderorder, "left-up")) {
+            map_renderorder_enum = .@"left-up";
+        } else {
+            map_renderorder_enum = .None;
+        }
 
         const map_infinite = map_node.getAttribute("infinite").?;
         var map_infinite_bool = false;
@@ -143,35 +190,28 @@ pub const Map = struct {
             map_infinite_bool = true;
         }
 
-        const attribs = map_node.attributes;
-        var index: u8 = 0;
-        while (index < attribs.len) : (index += 1) {
-            const attrib = attribs[index];
-            std.debug.print("{s}: {s}\n", .{ attrib.name, attrib.value });
-        }
+        //const map_staggeraxis = map_node.getAttribute("staggeraxis");
+
+        // const attribs = map_node.attributes;
+        // var index: u8 = 0;
+        // while (index < attribs.len) : (index += 1) {
+        //     const attrib = attribs[index];
+        //     std.debug.print("{s}: {s}\n", .{ attrib.name, attrib.value });
+        // }
 
         return .{
             .allocator = backing_allocator,
             .version = .{
-                .major = std.mem.splitScalar(u8, map_version, ".").first(),
-                .minor = std.mem.splitScalar(u8, map_version, ".").next().?,
+                .major = major_int,
+                .minor = minor_int,
             },
             //.class = self.class,
-            .orientation = switch (map_orientation_enum) {
-                .Orthogonal => .Orthogonal,
-                .Isometric => .Isometric,
-                .Staggered => .Staggered,
-                .Hexagonal => .Hexagonal,
-                else => .None,
-            },
-            .renderorder = switch (map_renderorder_enum) {
-                .@"right-down" => .@"right-down",
-                .@"right-up" => .@"right-up",
-                .@"left-down" => .@"left-down",
-                .@"left-up" => .@"left-up",
-                else => .None,
-            },
+            .orientation = map_orientation_enum,
+            .renderorder = map_renderorder_enum,
             .infinite = map_infinite_bool,
+            .stagger_axis = .None,
+            .stagger_index = .None,
+            .working_dir = workingDir,
         };
     }
 

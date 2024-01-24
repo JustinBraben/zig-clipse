@@ -39,7 +39,8 @@ pub fn main() !void {
     var index: u8 = 0;
     while (index < attribs.len) : (index += 1) {
         const attrib = attribs[index];
-        print("{s}: {s}\n", .{ attrib.name, attrib.value });
+        _ = attrib; // autofix
+        //print("{s}: {s}\n", .{ attrib.name, attrib.value });
     }
 
     //print("{s} - {s}\n", .{ doc.root.getAttribute("renderorder").? });
@@ -47,6 +48,9 @@ pub fn main() !void {
     var map: Map = undefined;
     map = try map.load_from_string(allocator, xml_src, xml_path);
     print("map working dir : {?s}\n", .{map.working_dir});
+    print("map orientation : {any}\n", .{map.orientation});
+    print("map render order: {any}\n", .{map.renderorder});
+    print("map version : {any}\n", .{map.version});
 
     // TODO: Create a Map struct that can hold the contents of a .tmx file
 
