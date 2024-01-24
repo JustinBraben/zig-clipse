@@ -1,5 +1,6 @@
 const std = @import("std");
 const xml = @import("xml.zig");
+const Tileset = @import("tmx_tileset.zig").Tileset;
 
 pub const Version = struct {
     major: u16 = 0,
@@ -95,7 +96,8 @@ pub const Map = struct {
             return error.InvalidXml;
         }
 
-        std.debug.print("map version : {?s}\n", .{map_version});
+        // Debug statement
+        // std.debug.print("map version : {?s}\n", .{map_version});
         var split_tokens = std.mem.tokenizeScalar(u8, map_version.?, '.');
         const major = split_tokens.next().?;
         const minor = split_tokens.next().?;
@@ -114,11 +116,12 @@ pub const Map = struct {
             return error.InvalidXml;
         }
         var map_orientation_enum: Orientation = undefined;
-
         // TODO: find a way to use stringToEnum with optional values
-        // const orientation_case = std.meta.stringToEnum(Orientation, map_orientation);
-        // _ = orientation_case; // autofix
-        // map_orientation_enum = switch (orientation_case) {
+        // const orientation_case = std.meta.stringToEnum(Orientation, map_orientation.?);
+        // if (orientation_case == null) {
+        //     return error.InvalidXml;
+        // }
+        // map_orientation_enum = switch (orientation_case.?) {
         //     .Orthogonal => .Orthogonal,
         //     .Isometric => .Isometric,
         //     .Staggered => .Staggered,
@@ -209,6 +212,16 @@ pub const Map = struct {
             error.InvalidCharacter => return error.InvalidXml,
             error.Overflow => return error.InvalidXml,
         };
+
+        // Debug tilesets
+        var tilesets = map_node.findChildrenByTag("tileset");
+        while (tilesets.next()) |tileset_node| {
+            const attribs = tileset_node.attributes;
+            var attrib_idx: u32 = 0;
+            while (attrib_idx < attribs.len) : (attrib_idx += 1) {
+                std.debug.print("{s}: {s}\n", .{ attribs[attrib_idx].name, attribs[attrib_idx].value });
+            }
+        }
 
         return .{
             .allocator = backing_allocator,
