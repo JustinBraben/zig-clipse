@@ -46,7 +46,7 @@ pub fn main() !void {
     //print("{s} - {s}\n", .{ doc.root.getAttribute("renderorder").? });
 
     var map: Map = undefined;
-    map = try map.load_from_string(allocator, xml_src, xml_path);
+    map = try map.loadFromString(allocator, xml_src, xml_path);
     print("map working dir : {?s}\n", .{map.working_dir});
     // print("map orientation : {any}\n", .{map.orientation});
     // print("map render order: {any}\n", .{map.renderorder});

@@ -56,9 +56,11 @@ pub const Map = struct {
     stagger_axis: StaggerAxis = .None,
     stagger_index: StaggerIndex = .None,
 
+    tilesets: std.ArrayList(Tileset) = undefined,
+
     working_dir: ?[]const u8 = null,
 
-    pub fn load_from_string(self: *Map, backing_allocator: std.mem.Allocator, tmxContents: []const u8, tmxPath: []const u8) !Map {
+    pub fn loadFromString(self: *Map, backing_allocator: std.mem.Allocator, tmxContents: []const u8, tmxPath: []const u8) !Map {
         self.reset();
 
         const doc = xml.parse(backing_allocator, tmxContents) catch |err| switch (err) {
@@ -84,10 +86,10 @@ pub const Map = struct {
             return error.InvalidXml;
         }
 
-        return try parse_map_node(backing_allocator, map_node, self.working_dir);
+        return try parseMapNode(backing_allocator, map_node, self.working_dir);
     }
 
-    fn parse_map_node(backing_allocator: std.mem.Allocator, map_node: *xml.Element, workingDir: ?[]const u8) !Map {
+    fn parseMapNode(backing_allocator: std.mem.Allocator, map_node: *xml.Element, workingDir: ?[]const u8) !Map {
 
         // parse map attributes
         var map_version: ?[]const u8 = undefined;
@@ -182,15 +184,18 @@ pub const Map = struct {
             // while (attrib_idx < attribs.len) : (attrib_idx += 1) {
             //     std.debug.print("{s}: {s}\n", .{ attribs[attrib_idx].name, attribs[attrib_idx].value });
             // }
-            const tileset = try Tileset.loadFromXmlTileNode(backing_allocator, tileset_node, workingDir);
+            const tileset = try Tileset.loadFromXmlTilesetNode(backing_allocator, tileset_node, workingDir);
             tileset_list.append(tileset) catch |err| {
                 return err;
             };
         }
 
+        // Debug tileset
         var tileset_list_index: usize = 0;
         while (tileset_list_index < tileset_list.items.len) : (tileset_list_index += 1) {
-            std.debug.print("tileset : {any}\n", .{tileset_list.items[tileset_list_index]});
+            //std.debug.print("tileset : {any}\n", .{tileset_list.items[tileset_list_index]});
+            //std.debug.print("tileset image source : {s}\n", .{tileset_list.items[tileset_list_index].image.source});
+            std.debug.print("tileset tiles : {any}\n", .{tileset_list.items[tileset_list_index].tiles.items});
         }
 
         return .{
@@ -208,6 +213,7 @@ pub const Map = struct {
             .next_object_id = try map_node.getAttributeAsInt("nextobjectid", u32),
             .stagger_axis = .None,
             .stagger_index = .None,
+            .tilesets = tileset_list,
             .working_dir = workingDir,
         };
     }
