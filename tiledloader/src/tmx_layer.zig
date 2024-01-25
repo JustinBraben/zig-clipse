@@ -1,5 +1,6 @@
 const std = @import("std");
 const xml = @import("xml.zig");
+const zlib = std.compress.zlib;
 
 pub const Data = struct {
     backing_allocator: std.mem.Allocator,
@@ -8,13 +9,25 @@ pub const Data = struct {
     contents: []const u8,
 
     pub fn loadFromXmlDataNode(backing_allocator: std.mem.Allocator, data_node: *xml.Element) !Data {
-        //std.debug.print("Data inner : {}\n", .{data_node.tag});
-        //std.debug.print("Data elems inner : {s}\n", .{data_node.elements().inner.items[0].char_data});
+        const char_data = data_node.elements().inner.items[0].char_data;
+        const trim_data = std.mem.trim(u8, char_data, "\r\n  ");
+        const first_new_line = std.mem.indexOfScalar(u8, char_data, '\n') orelse return error.NoNewLine;
+        const last_new_line = std.mem.lastIndexOfScalar(u8, char_data, '\n') orelse return error.NoNewLine;
+
+        if (std.mem.startsWith(u8, char_data, "\r")) {
+            std.debug.print("char data starts with new line\n", .{});
+        }
+
+        std.debug.print("Number of items for data : {}\n", .{data_node.elements().inner.items.len});
+        std.debug.print("first new line : {d}\n", .{first_new_line});
+        std.debug.print("last new line : {d}\n", .{last_new_line});
+        std.debug.print("Data elems inner : {s}\n", .{trim_data});
+
         return .{
             .backing_allocator = backing_allocator,
             .encoding = data_node.getAttribute("encoding") orelse return error.NoEncoding,
             .compression = data_node.getAttribute("compression"),
-            .contents = data_node.elements().inner.items[0].char_data,
+            .contents = trim_data,
         };
     }
 };

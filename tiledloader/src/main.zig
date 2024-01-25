@@ -47,7 +47,8 @@ pub fn main() !void {
 
     var map: Map = undefined;
     map = try map.loadFromString(allocator, xml_src, xml_path);
-    print("map working dir : {?s}\n", .{map.working_dir});
+    // print("map working dir : {?s}\n", .{map.working_dir});
+    // print("map : {any}\n", .{map});
     // print("map orientation : {any}\n", .{map.orientation});
     // print("map render order: {any}\n", .{map.renderorder});
     // print("map version : {any}\n", .{map.version});
