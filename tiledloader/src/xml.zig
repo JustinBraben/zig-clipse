@@ -30,6 +30,20 @@ pub const Element = struct {
         return null;
     }
 
+    pub fn getAttributeAsInt(self: Element, attrib_name: []const u8, comptime IntType: type) !IntType {
+        const attrib = self.getAttribute(attrib_name) orelse return error.AttributeMissing;
+
+        // TODO: check it is an int type
+        switch (@typeInfo(IntType)) {
+            .Int => {},
+            else => return error.InvalidIntType,
+        }
+
+        return std.fmt.parseInt(IntType, attrib, 10) catch |err| {
+            return err;
+        };
+    }
+
     pub fn getCharData(self: Element, child_tag: []const u8) ?[]const u8 {
         const child = self.findChildByTag(child_tag) orelse return null;
         if (child.children.len != 1) {

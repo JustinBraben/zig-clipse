@@ -159,26 +159,6 @@ pub const Map = struct {
             map_renderorder_enum = .None;
         }
 
-        var map_width: ?[]const u8 = undefined;
-        map_width = map_node.getAttribute("width");
-        if (map_width == null) {
-            return error.InvalidXml;
-        }
-        const map_width_int = std.fmt.parseInt(u32, map_width.?, 10) catch |err| switch (err) {
-            error.InvalidCharacter => return error.InvalidXml,
-            error.Overflow => return error.InvalidXml,
-        };
-
-        var map_height: ?[]const u8 = undefined;
-        map_height = map_node.getAttribute("height");
-        if (map_height == null) {
-            return error.InvalidXml;
-        }
-        const map_height_int = std.fmt.parseInt(u32, map_height.?, 10) catch |err| switch (err) {
-            error.InvalidCharacter => return error.InvalidXml,
-            error.Overflow => return error.InvalidXml,
-        };
-
         var map_infinite: ?[]const u8 = undefined;
         map_infinite = map_node.getAttribute("infinite");
         if (map_infinite == null) {
@@ -193,34 +173,24 @@ pub const Map = struct {
             return error.InvalidXml;
         }
 
-        var next_layer_id: ?[]const u8 = undefined;
-        next_layer_id = map_node.getAttribute("nextlayerid");
-        if (next_layer_id == null) {
-            return error.InvalidXml;
-        }
-        const next_layer_id_int = std.fmt.parseInt(u32, next_layer_id.?, 10) catch |err| switch (err) {
-            error.InvalidCharacter => return error.InvalidXml,
-            error.Overflow => return error.InvalidXml,
-        };
-
-        var next_object_id: ?[]const u8 = undefined;
-        next_object_id = map_node.getAttribute("nextlayerid");
-        if (next_layer_id == null) {
-            return error.InvalidXml;
-        }
-        const next_object_id_int = std.fmt.parseInt(u32, next_layer_id.?, 10) catch |err| switch (err) {
-            error.InvalidCharacter => return error.InvalidXml,
-            error.Overflow => return error.InvalidXml,
-        };
-
         // Debug tilesets
+        var tileset_list = std.ArrayList(Tileset).init(backing_allocator);
         var tilesets = map_node.findChildrenByTag("tileset");
         while (tilesets.next()) |tileset_node| {
-            const attribs = tileset_node.attributes;
-            var attrib_idx: u32 = 0;
-            while (attrib_idx < attribs.len) : (attrib_idx += 1) {
-                std.debug.print("{s}: {s}\n", .{ attribs[attrib_idx].name, attribs[attrib_idx].value });
-            }
+            // const attribs = tileset_node.attributes;
+            // var attrib_idx: u32 = 0;
+            // while (attrib_idx < attribs.len) : (attrib_idx += 1) {
+            //     std.debug.print("{s}: {s}\n", .{ attribs[attrib_idx].name, attribs[attrib_idx].value });
+            // }
+            const tileset = try Tileset.loadFromXmlTileNode(backing_allocator, tileset_node, workingDir);
+            tileset_list.append(tileset) catch |err| {
+                return err;
+            };
+        }
+
+        var tileset_list_index: usize = 0;
+        while (tileset_list_index < tileset_list.items.len) : (tileset_list_index += 1) {
+            std.debug.print("tileset : {any}\n", .{tileset_list.items[tileset_list_index]});
         }
 
         return .{
@@ -231,11 +201,11 @@ pub const Map = struct {
             },
             .orientation = map_orientation_enum,
             .renderorder = map_renderorder_enum,
-            .width = map_width_int,
-            .height = map_height_int,
+            .width = try map_node.getAttributeAsInt("width", u32),
+            .height = try map_node.getAttributeAsInt("width", u32),
             .infinite = map_infinite_bool,
-            .next_layer_id = next_layer_id_int,
-            .next_object_id = next_object_id_int,
+            .next_layer_id = try map_node.getAttributeAsInt("nextlayerid", u32),
+            .next_object_id = try map_node.getAttributeAsInt("nextobjectid", u32),
             .stagger_axis = .None,
             .stagger_index = .None,
             .working_dir = workingDir,
