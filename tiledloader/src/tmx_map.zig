@@ -1,6 +1,7 @@
 const std = @import("std");
 const xml = @import("xml.zig");
 const Tileset = @import("tmx_tileset.zig").Tileset;
+const Layer = @import("tmx_layer.zig").Layer;
 
 pub const Version = struct {
     major: u16 = 0,
@@ -57,6 +58,7 @@ pub const Map = struct {
     stagger_index: StaggerIndex = .None,
 
     tilesets: std.ArrayList(Tileset) = undefined,
+    layers: std.ArrayList(Layer) = undefined,
 
     working_dir: ?[]const u8 = null,
 
@@ -188,14 +190,23 @@ pub const Map = struct {
             tileset_list.append(tileset) catch |err| {
                 return err;
             };
+
+            // Debug tileset
+            //std.debug.print("tileset tiles : {any}\n", .{tileset});
         }
 
-        // Debug tileset
-        var tileset_list_index: usize = 0;
-        while (tileset_list_index < tileset_list.items.len) : (tileset_list_index += 1) {
-            //std.debug.print("tileset : {any}\n", .{tileset_list.items[tileset_list_index]});
-            //std.debug.print("tileset image source : {s}\n", .{tileset_list.items[tileset_list_index].image.source});
-            std.debug.print("tileset tiles : {any}\n", .{tileset_list.items[tileset_list_index].tiles.items});
+        var layer_list = std.ArrayList(Layer).init(backing_allocator);
+        var layers = map_node.findChildrenByTag("layer");
+        while (layers.next()) |layer_node| {
+            const layer = try Layer.loadFromXmlLayerNode(backing_allocator, layer_node);
+            layer_list.append(layer) catch |err| {
+                return err;
+            };
+
+            // Debug layer
+            // std.debug.print("layer id : {d}\n", .{layer.id});
+            // std.debug.print("encoding : {s}, compression : {?s}\n", .{ layer.data.encoding, layer.data.compression });
+            // std.debug.print("layer data inner : {s}\n", .{layer.data.contents});
         }
 
         return .{
@@ -214,6 +225,7 @@ pub const Map = struct {
             .stagger_axis = .None,
             .stagger_index = .None,
             .tilesets = tileset_list,
+            .layers = layer_list,
             .working_dir = workingDir,
         };
     }
