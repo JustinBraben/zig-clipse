@@ -5,7 +5,8 @@ const clap = @import("clap");
 const reflect = @import("reflect");
 
 // Third party zig libs from package manager
-const gl = @import("zgl");
+const zgl = @import("zgl");
+const glfw = @import("mach-glfw");
 
 const debug = std.debug;
 const io = std.io;
@@ -14,6 +15,16 @@ const mem = std.mem;
 const process = std.process;
 
 const c = @import("clibs.zig");
+
+fn glGetProcAddress(p: glfw.GLProc, proc: [:0]const u8) ?zgl.binding.FunctionPointer {
+    _ = p;
+    return glfw.getProcAddress(proc);
+}
+
+/// Default GLFW error handling callback
+fn errorCallback(error_code: glfw.ErrorCode, description: [:0]const u8) void {
+    std.log.err("glfw: {}: {s}\n", .{ error_code, description });
+}
 
 pub fn main() !void {
 
