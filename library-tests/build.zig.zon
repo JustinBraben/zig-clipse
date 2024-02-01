@@ -42,8 +42,11 @@
             .url = "https://github.com/fabioarnold/SDL/archive/db4a162db2f6f59f737d03f441455dc9524d5793.tar.gz",
             .hash = "1220c5360c9c71c215baa41b46ec18d0711059b48416a2b1cf96c7c2d87b2e8e4cf6",
         },
+        .zgl = .{
+            .url = "https://github.com/ziglibs/zgl/archive/2b8ba112b072ae3308ad1407e7faa418de8cf02e.tar.gz",
+            .hash = "12201f42fc562a3a1b32335dd3cc6449d58285e050777343868cb54aa7f8e42ce723",
+        },
     },
-
     // Specifies the set of files and directories that are included in this package.
     // Only files and directories listed here are included in the `hash` that
     // is computed for this package.

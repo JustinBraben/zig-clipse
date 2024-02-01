@@ -4,6 +4,9 @@ const std = @import("std");
 const clap = @import("clap");
 const reflect = @import("reflect");
 
+// Third party zig libs from package manager
+const gl = @import("zgl");
+
 const debug = std.debug;
 const io = std.io;
 const fs = std.fs;
@@ -13,6 +16,12 @@ const process = std.process;
 const c = @import("clibs.zig");
 
 pub fn main() !void {
+
+    // Bindings library still needs to be fixed though
+    // // Use classic OpenGL flavour
+    // const vao = gl.createVertexArray();
+    // defer gl.deleteVertexArray(vao);
+
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer std.testing.expect(gpa.deinit() != .leak) catch @panic("memory leak");
     const allocator = gpa.allocator();

@@ -28,6 +28,9 @@ pub fn build(b: *std.Build) void {
         exe.linkLibrary(sdl_dep.artifact("SDL2"));
     }
 
+    const zgl_dep = b.dependency("zgl", .{});
+    exe.root_module.addImport("zgl", zgl_dep.module("zgl"));
+
     // exe.linkSystemLibrary("pugixml");
     // exe.addIncludePath(.{ .path = "thirdparty/pugixml/src/" });
     // exe.addCSourceFiles(.{
