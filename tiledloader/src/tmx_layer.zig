@@ -10,18 +10,51 @@ pub const Data = struct {
 
     pub fn loadFromXmlDataNode(backing_allocator: std.mem.Allocator, data_node: *xml.Element) !Data {
         const char_data = data_node.elements().inner.items[0].char_data;
-        const trim_data = std.mem.trim(u8, char_data, "\r\n  ");
         const first_new_line = std.mem.indexOfScalar(u8, char_data, '\n') orelse return error.NoNewLine;
         const last_new_line = std.mem.lastIndexOfScalar(u8, char_data, '\n') orelse return error.NoNewLine;
-
-        if (std.mem.startsWith(u8, char_data, "\r")) {
-            std.debug.print("char data starts with new line\n", .{});
-        }
+        const trim_data = std.mem.trim(u8, char_data, "\r\n  ");
 
         std.debug.print("Number of items for data : {}\n", .{data_node.elements().inner.items.len});
         std.debug.print("first new line : {d}\n", .{first_new_line});
         std.debug.print("last new line : {d}\n", .{last_new_line});
         std.debug.print("Data elems inner : {s}\n", .{trim_data});
+
+        const compression = data_node.getAttribute("compression");
+        const encoding = data_node.getAttribute("encoding") orelse return error.NoEncoding;
+
+        if (std.mem.eql(u8, encoding, "csv")) {
+            return .{
+                .backing_allocator = backing_allocator,
+                .encoding = data_node.getAttribute("encoding") orelse return error.NoEncoding,
+                .compression = data_node.getAttribute("compression"),
+                .contents = trim_data,
+            };
+        } else if (std.mem.eql(u8, encoding, "base64")) {
+            if (compression != null) {
+                if (std.mem.eql(u8, compression.?, "zlib")) {
+                    const codecs = std.base64.standard;
+                    var buffer2: [0x500]u8 = undefined;
+                    const decoded_bytes = buffer2[0..try codecs.Decoder.calcSizeForSlice(trim_data)];
+                    try codecs.Decoder.decode(decoded_bytes, trim_data);
+
+                    var in_stream = std.io.fixedBufferStream(decoded_bytes);
+                    var zlib_stream = try std.compress.zlib.decompressStream(backing_allocator, in_stream.reader());
+                    defer zlib_stream.deinit();
+
+                    const decompressed_data = try zlib_stream.reader().readAllAlloc(backing_allocator, std.math.maxInt(usize));
+                    std.debug.print("Decoded, zlib compressed : {s}\n", .{decoded_bytes});
+                    std.debug.print("Decoded, Decompressed zlib : {any}\n", .{decompressed_data});
+                    return .{
+                        .backing_allocator = backing_allocator,
+                        .encoding = data_node.getAttribute("encoding") orelse return error.NoEncoding,
+                        .compression = data_node.getAttribute("compression"),
+                        .contents = decompressed_data,
+                    };
+                } else {}
+            }
+        } else {
+            return error.UnsupportedEncoding;
+        }
 
         return .{
             .backing_allocator = backing_allocator,
