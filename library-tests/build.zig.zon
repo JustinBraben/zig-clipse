@@ -46,10 +46,10 @@
             .url = "https://github.com/ziglibs/zgl/archive/2b8ba112b072ae3308ad1407e7faa418de8cf02e.tar.gz",
             .hash = "12201f42fc562a3a1b32335dd3cc6449d58285e050777343868cb54aa7f8e42ce723",
         },
-        .@"mach-glfw" = .{
-            .url = "https://pkg.machengine.org/mach-glfw/0ea4948b8b4a470284b8b72780e680321d7ffd29.tar.gz",
-            .hash = "12204bfbc23adcbd3dafdd93dd2dafc71c08ad03073a509799deb5d2dfe45c2946fe",
-        },
+        // .@"mach-glfw" = .{
+        //     .url = "https://pkg.machengine.org/mach-glfw/0ea4948b8b4a470284b8b72780e680321d7ffd29.tar.gz",
+        //     .hash = "12204bfbc23adcbd3dafdd93dd2dafc71c08ad03073a509799deb5d2dfe45c2946fe",
+        // },
     },
     // Specifies the set of files and directories that are included in this package.
     // Only files and directories listed here are included in the `hash` that
