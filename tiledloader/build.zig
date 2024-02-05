@@ -29,6 +29,9 @@ pub fn build(b: *std.Build) void {
         exe.linkLibrary(sdl_dep.artifact("SDL2"));
     }
 
+    const zigimg_dep = b.dependency("zigimg", .{ .target = target, .optimize = optimize });
+    exe.root_module.addImport("zigimg", zigimg_dep.module("zigimg"));
+
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

@@ -13,13 +13,15 @@ pub const Data = struct {
     pub fn loadFromXmlDataNode(backing_allocator: std.mem.Allocator, data_node: *xml.Element) !Data {
         const char_data = data_node.elements().inner.items[0].char_data;
         const first_new_line = std.mem.indexOfScalar(u8, char_data, '\n') orelse return error.NoNewLine;
+        _ = first_new_line; // autofix
         const last_new_line = std.mem.lastIndexOfScalar(u8, char_data, '\n') orelse return error.NoNewLine;
+        _ = last_new_line; // autofix
         const trim_data = std.mem.trim(u8, char_data, "\r\n  ");
 
-        std.debug.print("Number of items for data : {}\n", .{data_node.elements().inner.items.len});
-        std.debug.print("first new line : {d}\n", .{first_new_line});
-        std.debug.print("last new line : {d}\n", .{last_new_line});
-        std.debug.print("Data elems inner : {s}\n", .{trim_data});
+        //std.debug.print("Number of items for data : {}\n", .{data_node.elements().inner.items.len});
+        //std.debug.print("first new line : {d}\n", .{first_new_line});
+        //std.debug.print("last new line : {d}\n", .{last_new_line});
+        //std.debug.print("Data elems inner : {s}\n", .{trim_data});
 
         const compression = data_node.getAttribute("compression");
         const encoding = data_node.getAttribute("encoding") orelse return error.NoEncoding;
@@ -48,7 +50,7 @@ pub const Data = struct {
                     const decompressed_data = try zlib_stream.reader().readAllAlloc(backing_allocator, std.math.maxInt(usize));
 
                     var uint_32_list = std.ArrayList(u32).init(backing_allocator);
-
+                    try uint_32_list.append(decompressed_data[0..][0]);
                     var index: usize = 1;
                     while (index < decompressed_data.len) : (index += 4) {
                         const full_slice = decompressed_data[index..];

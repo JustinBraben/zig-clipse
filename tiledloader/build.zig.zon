@@ -6,6 +6,10 @@
             .url = "https://github.com/fabioarnold/SDL/archive/db4a162db2f6f59f737d03f441455dc9524d5793.tar.gz",
             .hash = "1220c5360c9c71c215baa41b46ec18d0711059b48416a2b1cf96c7c2d87b2e8e4cf6",
         },
+        .zigimg = .{
+            .url = "https://github.com/zigimg/zigimg/archive/2224f91ea4cf70f2254848657e308761b8cc8c5d.tar.gz",
+            .hash = "12207067e4892c48369415268648380859baa89c324748ae5bfda414a12868c9fc8b",
+        },
     },
     .paths = .{
         "",
