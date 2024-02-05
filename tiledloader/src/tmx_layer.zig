@@ -2,11 +2,13 @@ const std = @import("std");
 const xml = @import("xml.zig");
 const zlib = std.compress.zlib;
 
+const native_endian = @import("builtin").target.cpu.arch.endian();
+
 pub const Data = struct {
     backing_allocator: std.mem.Allocator,
     encoding: []const u8,
     compression: ?[]const u8,
-    contents: []const u8,
+    contents: std.ArrayList(u32),
 
     pub fn loadFromXmlDataNode(backing_allocator: std.mem.Allocator, data_node: *xml.Element) !Data {
         const char_data = data_node.elements().inner.items[0].char_data;
@@ -23,11 +25,13 @@ pub const Data = struct {
         const encoding = data_node.getAttribute("encoding") orelse return error.NoEncoding;
 
         if (std.mem.eql(u8, encoding, "csv")) {
+            // TODO: Implement CSV decoding
+            // Init u32 list, and append each csv value to it
             return .{
                 .backing_allocator = backing_allocator,
                 .encoding = data_node.getAttribute("encoding") orelse return error.NoEncoding,
                 .compression = data_node.getAttribute("compression"),
-                .contents = trim_data,
+                .contents = std.ArrayList(u32).init(backing_allocator),
             };
         } else if (std.mem.eql(u8, encoding, "base64")) {
             if (compression != null) {
@@ -42,25 +46,43 @@ pub const Data = struct {
                     defer zlib_stream.deinit();
 
                     const decompressed_data = try zlib_stream.reader().readAllAlloc(backing_allocator, std.math.maxInt(usize));
-                    std.debug.print("Decoded, zlib compressed : {s}\n", .{decoded_bytes});
-                    std.debug.print("Decoded, Decompressed zlib : {any}\n", .{decompressed_data});
+
+                    var uint_32_list = std.ArrayList(u32).init(backing_allocator);
+
+                    var index: usize = 1;
+                    while (index < decompressed_data.len) : (index += 4) {
+                        const full_slice = decompressed_data[index..];
+                        if (full_slice.len < 4) {
+                            break;
+                        }
+                        const slic = (decompressed_data[index..])[0..4];
+                        const uint_32 = bytesToU32(slic.*);
+                        try uint_32_list.append(uint_32);
+                        //std.debug.print("u = {d}\n", .{uint_32});
+                    }
+                    //var items_string: []const u8 = undefined;
+                    //items_string = try std.fmt.allocPrint(backing_allocator, "{d}\n", .{uint_32_list.items});
+
+                    //std.debug.print("Decoded, zlib compressed : {s}\n", .{decoded_bytes});
+                    //std.debug.print("Decoded, Decompressed zlib : {any}\n", .{decompressed_data});
+                    //std.debug.print("u32 list : {any}\n", .{uint_32_list.items});
+
                     return .{
                         .backing_allocator = backing_allocator,
                         .encoding = data_node.getAttribute("encoding") orelse return error.NoEncoding,
                         .compression = data_node.getAttribute("compression"),
-                        .contents = decompressed_data,
+                        .contents = uint_32_list,
                     };
                 } else {}
             }
         } else {
             return error.UnsupportedEncoding;
         }
-
         return .{
             .backing_allocator = backing_allocator,
             .encoding = data_node.getAttribute("encoding") orelse return error.NoEncoding,
             .compression = data_node.getAttribute("compression"),
-            .contents = trim_data,
+            .contents = std.ArrayList(u32).init(backing_allocator),
         };
     }
 };
@@ -86,3 +108,11 @@ pub const Layer = struct {
         };
     }
 };
+
+fn bytesToU32(bytes: [4]u8) u32 {
+    if (native_endian == .big) {
+        return bytes[0] | (@as(u32, bytes[1]) << 8) | (@as(u32, bytes[2]) << 16) | (@as(u32, bytes[3]) << 24);
+    } else {
+        return (@as(u32, bytes[0]) << 24) | (@as(u32, bytes[1]) << 16) | (@as(u32, bytes[2]) << 8) | bytes[3];
+    }
+}
