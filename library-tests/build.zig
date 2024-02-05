@@ -28,8 +28,10 @@ pub fn build(b: *std.Build) void {
         exe.linkLibrary(sdl_dep.artifact("SDL2"));
     }
 
-    const mach_glfw_dep = b.dependency("mach-glfw", .{});
-    exe.root_module.addImport("mach-glfw", mach_glfw_dep.module("mach-glfw"));
+    // Uncomment to add mach_glfw as a dependency
+    // Needs a specific zig version to work
+    // const mach_glfw_dep = b.dependency("mach-glfw", .{});
+    // exe.root_module.addImport("mach-glfw", mach_glfw_dep.module("mach-glfw"));
 
     const zgl_dep = b.dependency("zgl", .{});
     exe.root_module.addImport("zgl", zgl_dep.module("zgl"));
