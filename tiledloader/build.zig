@@ -23,6 +23,7 @@ pub fn build(b: *std.Build) void {
 
     if (target.query.isNativeOs() and target.result.os.tag == .linux) {
         exe.linkSystemLibrary("SDL2");
+        exe.linkSystemLibrary("SDL2_image");
         exe.linkLibC();
     } else {
         const sdl_dep = b.dependency("sdl", .{ .target = target, .optimize = optimize });

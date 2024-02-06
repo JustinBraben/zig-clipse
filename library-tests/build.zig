@@ -46,6 +46,15 @@ pub fn build(b: *std.Build) void {
     // exe.linkLibCpp();
 
     b.installArtifact(exe);
+    // switch (target.result.os.tag) {
+    //     .windows => {
+    //         b.installBinFile("thirdparty/sdl2_image/lib/SDL2_image.dll", "SDL2_image.dll");
+    //     },
+    //     else => {
+    //         //b.installBinFile("thirdparty/sdl3/lib/libSDL3.so", "libSDL3.so.0");
+    //         //exe.root_module.addRPathSpecial("$ORIGIN");
+    //     },
+    // }
 
     // Add pugixml as a static library
     // const pugixml_lib = b.addStaticLibrary(.{
