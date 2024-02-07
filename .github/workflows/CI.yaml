@@ -38,7 +38,7 @@ jobs:
       - name: setup-linux
         if: matrix.os == 'ubuntu-latest'
         run: | 
-          sudo apt-get update && sudo apt-get install libsdl2-dev
+          sudo apt-get update && sudo apt-get install libsdl2-dev libsdl2-image-dev
 
       - name: Build Linux
         if: matrix.os == 'ubuntu-latest'

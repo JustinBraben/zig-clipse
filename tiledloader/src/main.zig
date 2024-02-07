@@ -83,6 +83,8 @@ pub fn main() !void {
     };
     defer c.SDL_DestroyRenderer(renderer);
 
+    // TODO: Load a png file into an SDL texture
+
     // const surface = c.IMG_Load("assets/images/tileset.png") orelse {
     //     c.SDL_Log("Unable to load image: %s", c.SDL_GetError());
     //     return error.SDLInitializationFailed;
