@@ -5,14 +5,22 @@ const vki = @import("VkInitializers.zig");
 
 const log = std.log.scoped(.vulkan_engine);
 
+const VK_NULL_HANDLE = null;
+
 pub const VkEngine = struct {
     allocator: std.mem.Allocator = undefined,
+
+    // Vulkan data
+    instance: c.VkInstance = VK_NULL_HANDLE,
+    debug_messenger: c.VkDebugUtilsMessengerEXT = VK_NULL_HANDLE,
 
     window: *c.SDL_Window = undefined,
 
     frame_number: u64 = 0,
 
     is_initialized: bool = false,
+
+    const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) !VkEngine {
         // Init SDL
@@ -29,9 +37,19 @@ pub const VkEngine = struct {
 
         _ = c.SDL_ShowWindow(window);
 
-        // init_instance();
+        var engine = Self{
+            .window = window,
+            .allocator = allocator,
+            .frame_number = 0,
+            .is_initialized = false,
+        };
 
-        return VkEngine{ .allocator = allocator, .window = window, .frame_number = 0, .is_initialized = true };
+        engine.init_instance() catch |err| {
+            log.err("Failed to initialize vulkan instance with error: {s}", .{@errorName(err)});
+            unreachable;
+        };
+
+        return engine;
     }
 
     pub fn draw(self: *VkEngine) void {
@@ -66,7 +84,26 @@ pub const VkEngine = struct {
         c.SDL_DestroyWindow(self.window);
     }
 
-    fn init_instance(self: *VkEngine) void {
-        _ = self; // autofix
+    fn init_instance(self: *VkEngine) !void {
+        var sdl_required_extension_count: u32 = undefined;
+        const sdl_extensions = c.SDL_Vulkan_GetInstanceExtensions(&sdl_required_extension_count);
+        const sdl_extension_slice = sdl_extensions[0..sdl_required_extension_count];
+
+        // Instance creation, and optional debug utils
+        const instance = vki.create_instance(std.heap.page_allocator, .{
+            .application_name = "VkEndeavors",
+            .application_version = c.VK_MAKE_VERSION(0, 1, 0),
+            .engine_name = "VkEndeavors",
+            .engine_version = c.VK_MAKE_VERSION(0, 1, 0),
+            .api_version = c.VK_MAKE_VERSION(1, 1, 0),
+            .debug = true,
+            .required_extensions = sdl_extension_slice,
+        }) catch |err| {
+            log.err("Failed to create vulkan instance with error: {s}", .{@errorName(err)});
+            unreachable;
+        };
+
+        self.instance = instance.handle;
+        self.debug_messenger = instance.debug_messenger;
     }
 };
