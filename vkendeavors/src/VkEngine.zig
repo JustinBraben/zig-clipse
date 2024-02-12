@@ -2,6 +2,7 @@ const std = @import("std");
 const c = @import("clibs.zig");
 
 const vki = @import("VkInitializers.zig");
+const check_vk = vki.check_vk;
 
 const log = std.log.scoped(.VkEngine);
 
@@ -25,11 +26,18 @@ pub const VkEngine = struct {
     device: c.VkDevice = VK_NULL_HANDLE,
     surface: c.VkSurfaceKHR = VK_NULL_HANDLE,
 
+    graphics_queue: c.VkQueue = VK_NULL_HANDLE,
+    graphics_queue_family: u32 = undefined,
+    present_queue: c.VkQueue = VK_NULL_HANDLE,
+    present_queue_family: u32 = undefined,
+
     window: *c.SDL_Window = undefined,
 
     frame_number: u64 = 0,
 
     is_initialized: bool = false,
+
+    vma_allocator: c.VmaAllocator = undefined,
 
     const Self = @This();
 
@@ -64,6 +72,36 @@ pub const VkEngine = struct {
         check_sdl_bool(c.SDL_Vulkan_CreateSurface(window, engine.instance, vk_alloc_cbs, &engine.surface));
 
         try engine.init_device();
+
+        // Create a VMA allocator
+        const allocator_ci = std.mem.zeroInit(c.VmaAllocatorCreateInfo, .{
+            .physicalDevice = engine.physical_device,
+            .device = engine.device,
+            .instance = engine.instance,
+        });
+
+        check_vk(c.vmaCreateAllocator(&allocator_ci, &engine.vma_allocator))
+            catch @panic("Failed to create VMA allocator");
+        
+        // TODO create swapchain
+
+        // TODO create commands
+
+        // TODO create default render pass
+
+        // TODO create framebuffers
+
+        // TODO create sync structures
+
+        // TODO create descriptors
+
+        // TODO create pipelines
+
+        // TODO load textures
+
+        // TODO load meshes
+
+        // TODO create scene
 
         return engine;
     }
@@ -142,7 +180,27 @@ pub const VkEngine = struct {
         self.physical_device = physical_device.handle;
         self.physical_device_properties = physical_device.properties;
 
-        // });
+        log.info("The GPU has a minimum buffer alignment of {} bytes", .{physical_device.properties.limits.minUniformBufferOffsetAlignment});
+
+        self.graphics_queue_family = physical_device.graphics_queue_family;
+        self.present_queue_family = physical_device.present_queue_family;
+
+        const shader_draw_parameters_features = std.mem.zeroInit(c.VkPhysicalDeviceShaderDrawParametersFeatures, .{
+            .sType = c.VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DRAW_PARAMETERS_FEATURES,
+            .shaderDrawParameters = c.VK_TRUE,
+        });
+
+        // Create a logical device
+        const device = vki.create_logical_device(self.allocator, .{
+            .physical_device = physical_device,
+            .features = std.mem.zeroInit(c.VkPhysicalDeviceFeatures, .{}),
+            .alloc_cb = vk_alloc_cbs,
+            .pnext = &shader_draw_parameters_features,
+        }) catch @panic("Failed to create logical device");
+
+        self.device = device.handle;
+        self.graphics_queue = device.graphics_queue;
+        self.present_queue = device.present_queue;
     }
 };
 
