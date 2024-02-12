@@ -1,7 +1,7 @@
 const std = @import("std");
 const c = @import("clibs.zig");
 
-const log = std.log.scoped(.vulkan_init);
+const log = std.log.scoped(.VkInitializers);
 
 // TODO: Vulkan initialization code will be here
 
@@ -25,6 +25,197 @@ pub const Instance = struct {
     handle: c.VkInstance = null,
     debug_messenger: c.VkDebugUtilsMessengerEXT = null,
 };
+
+/// Physical device selection criteria
+pub const PhysicalDeviceSelectionCriteria = enum {
+    /// Select the first device that matches the criteria.
+    First,
+    /// Prefer a discrete gpu.
+    PreferDiscrete,
+};
+
+/// Device selector options
+///
+pub const PhysicalDeviceSelectOptions = struct {
+    /// Minimum required vulkan api version.
+    min_api_version: u32 = c.VK_MAKE_VERSION(1, 0, 0),
+    /// Required device extensions.
+    required_extensions: []const [*c]const u8 = &.{},
+    /// Presentation surface.
+    surface: c.VkSurfaceKHR,
+    /// Selection criteria.
+    criteria: PhysicalDeviceSelectionCriteria = .PreferDiscrete,
+};
+
+/// Physical device selection criteria
+pub const PhysicalDevice = struct {
+    /// Selected physical device 
+    handle: c.VkPhysicalDevice = null,
+    /// Selected physical device properties
+    properties: c.VkPhysicalDeviceProperties = undefined,
+    /// Queue family indices
+    graphics_queue_family: u32 = undefined,
+    present_queue_family: u32 = undefined,
+    compute_queue_family: u32 = undefined,
+    transfer_queue_family: u32 = undefined,
+
+    const INVALID_QUEUE_FAMILY_INDEX: u32 = std.math.maxInt(u32);
+};
+
+/// Find suitable physical device
+/// 
+pub fn select_physical_device(
+    a: std.mem.Allocator,
+    instance: c.VkInstance,
+    options: PhysicalDeviceSelectOptions
+) !PhysicalDevice {
+    var physical_device_count: u32 = undefined;
+    try check_vk(c.vkEnumeratePhysicalDevices(instance, &physical_device_count, null));
+
+    var arena_state = std.heap.ArenaAllocator.init(a);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    const physical_devices = try arena.alloc(c.VkPhysicalDevice, physical_device_count);
+    try check_vk(c.vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices.ptr));
+
+    var suitable_pd: ?PhysicalDevice = null;
+
+    for (physical_devices) |device| {
+        const pd = make_physical_device(a, device, options.surface) catch continue;
+        _ = is_physical_device_suitable(a, pd, options) catch continue;
+
+        if (options.criteria == PhysicalDeviceSelectionCriteria.First) {
+            suitable_pd = pd;
+            break;
+        }
+
+        if (pd.properties.deviceType == c.VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+            suitable_pd = pd;
+            break;
+        } else if (suitable_pd == null) {
+            suitable_pd = pd;
+        }
+    }
+
+    if (suitable_pd == null) {
+        log.err("No suitable physical device found.", .{});
+        return error.vulkan_no_suitable_physical_device;
+    }
+
+    const res = suitable_pd.?;
+
+    const device_name = @as([*:0]const u8, @ptrCast(@alignCast(res.properties.deviceName[0..])));
+    log.info("Selected physical device: {s}", .{ device_name });
+
+    return res;
+}
+
+fn make_physical_device(
+    a: std.mem.Allocator,
+    device: c.VkPhysicalDevice,
+    surface: c.VkSurfaceKHR
+) !PhysicalDevice {
+    var props = std.mem.zeroInit(c.VkPhysicalDeviceProperties, .{});
+    c.vkGetPhysicalDeviceProperties(device, &props);
+
+    var graphics_queue_family: u32 = PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX;
+    var present_queue_family: u32 = PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX;
+    var compute_queue_family: u32 = PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX;
+    var transfer_queue_family: u32 = PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX;
+
+    var queue_family_count: u32 = undefined;
+    c.vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, null);
+    const queue_families = try a.alloc(c.VkQueueFamilyProperties, queue_family_count);
+    defer a.free(queue_families);
+    c.vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.ptr);
+
+    for (queue_families, 0..) |queue_family, i| {
+        const index: u32 = @intCast(i);
+
+        if (graphics_queue_family == PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX and
+            queue_family.queueFlags & c.VK_QUEUE_GRAPHICS_BIT != 0)
+        {
+            graphics_queue_family= index;
+        }
+
+        if (present_queue_family == PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX) {
+            var present_support: c.VkBool32 = undefined;
+            try check_vk(c.vkGetPhysicalDeviceSurfaceSupportKHR(device, index, surface, &present_support));
+            if (present_support == c.VK_TRUE) {
+                present_queue_family = index;
+            }
+        }
+
+        if (compute_queue_family == PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX and
+            queue_family.queueFlags & c.VK_QUEUE_COMPUTE_BIT != 0)
+        {
+            compute_queue_family = index;
+        }
+
+        if (transfer_queue_family == PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX and
+            queue_family.queueFlags & c.VK_QUEUE_TRANSFER_BIT != 0) {
+            transfer_queue_family = index;
+        }
+
+        if (graphics_queue_family != PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX and
+            present_queue_family != PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX and
+            compute_queue_family != PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX and
+            transfer_queue_family != PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX) {
+            break;
+        }
+    }
+
+    return .{
+        .handle = device,
+        .properties = props,
+        .graphics_queue_family = graphics_queue_family,
+        .present_queue_family = present_queue_family,
+        .compute_queue_family = compute_queue_family,
+        .transfer_queue_family = transfer_queue_family,
+    };
+}
+
+fn is_physical_device_suitable(a: std.mem.Allocator, device: PhysicalDevice, options: PhysicalDeviceSelectOptions) !bool {
+    if (device.properties.apiVersion < options.min_api_version) {
+        return false;
+    }
+
+    if (device.graphics_queue_family == PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX or
+        device.present_queue_family == PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX or
+        device.compute_queue_family == PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX or
+        device.transfer_queue_family == PhysicalDevice.INVALID_QUEUE_FAMILY_INDEX) {
+        return false;
+    }
+
+    var arena_state = std.heap.ArenaAllocator.init(a);
+    defer arena_state.deinit();
+    const arena = arena_state.allocator();
+
+    // const swapchain_support = try SwapchainSupportInfo.init(arena, device.handle, options.surface);
+    // defer swapchain_support.deinit(arena);
+    // if (swapchain_support.formats.len == 0 or swapchain_support.present_modes.len == 0) {
+    //     return false;
+    // }
+
+    if (options.required_extensions.len > 0) {
+        var device_extension_count: u32 = undefined;
+        try check_vk(c.vkEnumerateDeviceExtensionProperties(device.handle, null, &device_extension_count, null));
+        const device_extensions = try arena.alloc(c.VkExtensionProperties, device_extension_count);
+        try check_vk(c.vkEnumerateDeviceExtensionProperties(device.handle, null, &device_extension_count, device_extensions.ptr));
+
+        _ = blk: for (options.required_extensions) |req_ext| {
+            for (device_extensions) |device_ext| {
+                const device_ext_name: [*c]const u8 = @ptrCast(device_ext.extensionName[0..]);
+                if (std.mem.eql(u8, std.mem.span(req_ext), std.mem.span(device_ext_name))) {
+                    break :blk true;
+                }
+            }
+        } else return false;
+    }
+
+    return true;
+}
 
 pub fn create_instance(allocator: std.mem.Allocator, options: VkiInstanceOptions) !Instance {
     // Check the api version is supported

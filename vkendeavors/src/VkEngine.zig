@@ -3,7 +3,7 @@ const c = @import("clibs.zig");
 
 const vki = @import("VkInitializers.zig");
 
-const log = std.log.scoped(.vulkan_engine);
+const log = std.log.scoped(.VkEngine);
 
 const window_extent = c.VkExtent2D{ .width = 1600, .height = 900 };
 const window_flags = c.SDL_WINDOW_VULKAN | c.SDL_WINDOW_RESIZABLE;
@@ -18,6 +18,9 @@ pub const VkEngine = struct {
     // Vulkan data
     instance: c.VkInstance = VK_NULL_HANDLE,
     debug_messenger: c.VkDebugUtilsMessengerEXT = VK_NULL_HANDLE,
+
+    physical_device: c.VkPhysicalDevice = VK_NULL_HANDLE,
+    physical_device_properties: c.VkPhysicalDeviceProperties = undefined,
 
     device: c.VkDevice = VK_NULL_HANDLE,
     surface: c.VkSurfaceKHR = VK_NULL_HANDLE,
@@ -58,7 +61,9 @@ pub const VkEngine = struct {
         try engine.init_instance();
 
         // Create the window surface
-        //check_sdl_bool(c.SDL_Vulkan_CreateSurface(window, engine.instance, vk_alloc_cbs, &engine.surface));
+        check_sdl_bool(c.SDL_Vulkan_CreateSurface(window, engine.instance, vk_alloc_cbs, &engine.surface));
+
+        try engine.init_device();
 
         return engine;
     }
@@ -116,6 +121,28 @@ pub const VkEngine = struct {
 
         self.instance = instance.handle;
         self.debug_messenger = instance.debug_messenger;
+    }
+
+    fn init_device(self: *VkEngine) !void {
+        // Physical device selection
+        const required_device_extensions: []const [*c]const u8 = &.{
+            "VK_KHR_swapchain"
+        };
+
+        const physical_device = vki.select_physical_device(std.heap.page_allocator, self.instance, .{
+            .min_api_version = c.VK_MAKE_VERSION(1, 1, 0),
+            .required_extensions = required_device_extensions,
+            .surface = self.surface,
+            .criteria = .PreferDiscrete,
+        }) catch |err| {
+            log.err("Failed to select physical device with error: {s}\n", .{@errorName(err)});
+            unreachable;
+        };
+
+        self.physical_device = physical_device.handle;
+        self.physical_device_properties = physical_device.properties;
+
+        // });
     }
 };
 
