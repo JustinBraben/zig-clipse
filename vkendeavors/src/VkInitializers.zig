@@ -8,15 +8,15 @@ const log = std.log.scoped(.vulkan_init);
 /// Instance init settings
 ///
 pub const VkiInstanceOptions = struct {
-    application_name: []const u8 = "vki",
+    application_name: [:0]const u8 = "vki",
     application_version: u32 = c.VK_MAKE_VERSION(1, 0, 0),
-    engine_name: []const u8 = "My Vk engine",
+    engine_name: ?[:0]const u8 = "My Vk engine",
     engine_version: u32 = c.VK_MAKE_VERSION(1, 0, 0),
     api_version: u32 = c.VK_MAKE_VERSION(1, 0, 0),
     debug: bool = false,
     debug_callback: ?c.PFN_vkDebugUtilsMessengerCallbackEXT = null,
     required_extensions: []const [*c]const u8 = &.{},
-    alloc_rb: ?*c.VkAllocationCallbacks = null,
+    alloc_cb: ?*c.VkAllocationCallbacks = null,
 };
 
 /// Result for create_instance
@@ -44,6 +44,12 @@ pub fn create_instance(allocator: std.mem.Allocator, options: VkiInstanceOptions
     const layer_props = try arena.alloc(c.VkLayerProperties, layer_count);
     try check_vk(c.vkEnumerateInstanceLayerProperties(&layer_count, layer_props.ptr));
 
+    var extension_count: u32 = undefined;
+    try check_vk(c.vkEnumerateInstanceExtensionProperties(null, &extension_count, null));
+    const extension_props = try arena.alloc(c.VkExtensionProperties, extension_count);
+    try check_vk(c.vkEnumerateInstanceExtensionProperties(null, &extension_count, extension_props.ptr));
+
+    // Check validation layer support
     var layers = std.ArrayListUnmanaged([*c]const u8){};
     if (enable_validation) {
         enable_validation = blk: for (layer_props) |layer_prop| {
@@ -56,7 +62,136 @@ pub fn create_instance(allocator: std.mem.Allocator, options: VkiInstanceOptions
         } else false;
     }
 
-    return .{ .handle = null, .debug_messenger = null };
+    // Check if the required extensions are supported
+    var extensions = std.ArrayListUnmanaged([*c]const u8){};
+
+    const ExtensionFinder = struct {
+        fn find(name: [*c]const u8, props: []c.VkExtensionProperties) bool {
+            for (props) |prop| {
+                const prop_name: [*c]const u8 = @ptrCast(prop.extensionName[0..]);
+                if (std.mem.eql(u8, std.mem.span(name), std.mem.span(prop_name))) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    };
+
+    // Start ensuring all SDL required extensions are supported
+    for (options.required_extensions) |required_ext| {
+        if (ExtensionFinder.find(required_ext, extension_props)) {
+            try extensions.append(arena, required_ext);
+        } else {
+            log.err("Required vulkan extension not supported: {s}", .{ required_ext });
+            return error.vulkan_extension_not_supported;
+        }
+    }
+
+    // If we need validation, also add the debug utils extension
+    if (enable_validation and ExtensionFinder.find("VK_EXT_debug_utils", extension_props)) {
+        try extensions.append(arena, "VK_EXT_debug_utils");
+    } else {
+        enable_validation = false;
+    }
+
+    const app_info = std.mem.zeroInit(c.VkApplicationInfo, .{
+        .sType = c.VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .apiVersion = options.api_version,
+        .pApplicationName = options.application_name,
+        .pEngineName = options.engine_name orelse options.application_name,
+    });
+
+    const instance_info = std.mem.zeroInit(c.VkInstanceCreateInfo, .{
+        .sType = c.VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pApplicationInfo = &app_info,
+        .enabledLayerCount = @as(u32, @intCast(layers.items.len)),
+        .ppEnabledLayerNames = layers.items.ptr,
+        .enabledExtensionCount = @as(u32, @intCast(extensions.items.len)),
+        .ppEnabledExtensionNames = extensions.items.ptr,
+    });
+
+    var instance: c.VkInstance = undefined;
+    try check_vk(c.vkCreateInstance(&instance_info, options.alloc_cb, &instance));
+    log.info("Created vulkan instance.", .{});
+
+    // Create the debug messenger if needed
+    const debug_messenger = if (enable_validation)
+        try create_debug_callback(instance, options)
+    else
+        null;
+
+    return .{ .handle = instance, .debug_messenger = debug_messenger };
+}
+
+fn get_vulkan_instance_funct(comptime Fn: type, instance: c.VkInstance, name: [*c]const u8) Fn {
+    const get_proc_addr: c.PFN_vkGetInstanceProcAddr = @ptrCast(c.SDL_Vulkan_GetVkGetInstanceProcAddr());
+    if (get_proc_addr) |get_proc_addr_fn| {
+        return @ptrCast(get_proc_addr_fn(instance, name));
+    }
+
+    @panic("SDL_Vulkan_GetVkGetInstanceProcAddr returned null");
+}
+
+fn create_debug_callback(instance: c.VkInstance, options: VkiInstanceOptions) !c.VkDebugUtilsMessengerEXT {
+    const create_fn_option = get_vulkan_instance_funct(
+        c.PFN_vkCreateDebugUtilsMessengerEXT,
+        instance, 
+        "vkCreateDebugUtilsMessengerEXT"
+    );
+
+    if (create_fn_option) |create_fn| {
+        const create_info = std.mem.zeroInit(c.VkDebugUtilsMessengerCreateInfoEXT, .{
+            .sType = c.VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+            .messageSeverity = c.VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+                c.VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                c.VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+            .messageType = c.VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT |
+                c.VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+                c.VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+                c.VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+            .pfnUserCallback = options.debug_callback orelse default_debug_callback,
+            .pUserData = null,
+        });
+
+        var debug_messenger: c.VkDebugUtilsMessengerEXT = undefined;
+        try check_vk(create_fn(instance, &create_info, options.alloc_cb, &debug_messenger));
+        log.info("Created vulkan debug messenger.", .{});
+        return debug_messenger;
+    }
+    return null;
+}
+
+fn default_debug_callback(
+    severity: c.VkDebugUtilsMessageSeverityFlagBitsEXT,
+    msg_type: c.VkDebugUtilsMessageTypeFlagsEXT,
+    callback_data: ?* const c.VkDebugUtilsMessengerCallbackDataEXT,
+    user_data: ?*anyopaque
+) callconv(.C) c.VkBool32 {
+    _ = user_data;
+    const severity_str = switch (severity) {
+        c.VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT => "verbose",
+        c.VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT => "info",
+        c.VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT => "warning",
+        c.VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT => "error",
+        else => "unknown",
+    };
+
+    const type_str = switch (msg_type) {
+        c.VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT => "general",
+        c.VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT => "validation",
+        c.VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT => "performance",
+        c.VK_DEBUG_UTILS_MESSAGE_TYPE_DEVICE_ADDRESS_BINDING_BIT_EXT => "device address",
+        else => "unknown",
+    };
+
+    const message: [*c]const u8 = if (callback_data) |cb_data| cb_data.pMessage else "NO MESSAGE!";
+    log.err("[{s}][{s}]. Message:\n  {s}", .{ severity_str, type_str, message });
+
+    if (severity >= c.VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+        @panic("Unrecoverable vulkan error.");
+    }
+
+    return c.VK_FALSE;
 }
 
 pub fn check_vk(result: c.VkResult) !void {

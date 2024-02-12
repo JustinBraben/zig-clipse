@@ -5,7 +5,12 @@ const vki = @import("VkInitializers.zig");
 
 const log = std.log.scoped(.vulkan_engine);
 
+const window_extent = c.VkExtent2D{ .width = 1600, .height = 900 };
+const window_flags = c.SDL_WINDOW_VULKAN | c.SDL_WINDOW_RESIZABLE;
+
 const VK_NULL_HANDLE = null;
+
+const vk_alloc_cbs: ?*c.VkAllocationCallbacks = null;
 
 pub const VkEngine = struct {
     allocator: std.mem.Allocator = undefined,
@@ -13,6 +18,9 @@ pub const VkEngine = struct {
     // Vulkan data
     instance: c.VkInstance = VK_NULL_HANDLE,
     debug_messenger: c.VkDebugUtilsMessengerEXT = VK_NULL_HANDLE,
+
+    device: c.VkDevice = VK_NULL_HANDLE,
+    surface: c.VkSurfaceKHR = VK_NULL_HANDLE,
 
     window: *c.SDL_Window = undefined,
 
@@ -23,17 +31,20 @@ pub const VkEngine = struct {
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) !VkEngine {
+        check_sdl(c.SDL_Init(c.SDL_INIT_VIDEO));
+
         // Init SDL
         if (c.SDL_Init(c.SDL_INIT_VIDEO) != 0) {
             std.debug.print("Detected SDL error: {s}", .{c.SDL_GetError()});
             @panic("SDL error");
         }
 
-        const window_flags = c.SDL_WINDOW_VULKAN | c.SDL_WINDOW_RESIZABLE;
-
-        const window_extent = c.VkExtent2D{ .width = 1600, .height = 900 };
-
-        const window = c.SDL_CreateWindow("Vulkan Engine", window_extent.width, window_extent.height, window_flags) orelse @panic("Failed to create SDL window");
+        const window = c.SDL_CreateWindow(
+            "Vulkan",
+            window_extent.width,
+            window_extent.height,
+            window_flags
+        ) orelse @panic("Failed to create SDL window");
 
         _ = c.SDL_ShowWindow(window);
 
@@ -44,10 +55,10 @@ pub const VkEngine = struct {
             .is_initialized = false,
         };
 
-        engine.init_instance() catch |err| {
-            log.err("Failed to initialize vulkan instance with error: {s}", .{@errorName(err)});
-            unreachable;
-        };
+        try engine.init_instance();
+
+        // Create the window surface
+        //check_sdl_bool(c.SDL_Vulkan_CreateSurface(window, engine.instance, vk_alloc_cbs, &engine.surface));
 
         return engine;
     }
@@ -107,3 +118,17 @@ pub const VkEngine = struct {
         self.debug_messenger = instance.debug_messenger;
     }
 };
+
+fn check_sdl(res: c_int) void {
+    if (res != 0) {
+        log.err("Detected SDL error: {s}\n", .{c.SDL_GetError()});
+        @panic("SDL error");
+    }
+}
+
+fn check_sdl_bool(res: c.SDL_bool) void {
+    if (res != c.SDL_TRUE) {
+        log.err("Detected SDL error: {s}\n", .{c.SDL_GetError()});
+        @panic("SDL error");
+    }
+}
