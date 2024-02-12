@@ -13,6 +13,16 @@ const VK_NULL_HANDLE = null;
 
 const vk_alloc_cbs: ?*c.VkAllocationCallbacks = null;
 
+pub const AllocatedBuffer = struct {
+    buffer: c.VkBuffer,
+    allocation: c.VmaAllocation,
+};
+
+pub const AllocatedImage = struct {
+    image: c.VkImage,
+    allocation: c.VmaAllocation,
+};
+
 pub const VkEngine = struct {
     allocator: std.mem.Allocator = undefined,
 
@@ -25,6 +35,12 @@ pub const VkEngine = struct {
 
     device: c.VkDevice = VK_NULL_HANDLE,
     surface: c.VkSurfaceKHR = VK_NULL_HANDLE,
+
+    swapchain: c.VkSwapchainKHR = VK_NULL_HANDLE,
+    swapchain_format: c.VkFormat = undefined,
+    swapchain_extent: c.VkExtent2D = undefined,
+    swapchain_images: []c.VkImage = undefined,
+    swapchain_image_views: []c.VkImageView = undefined,
 
     graphics_queue: c.VkQueue = VK_NULL_HANDLE,
     graphics_queue_family: u32 = undefined,
@@ -39,7 +55,59 @@ pub const VkEngine = struct {
 
     vma_allocator: c.VmaAllocator = undefined,
 
+    deletion_queue: std.ArrayList(VulkanDeleter) = undefined,
+    buffer_deletion_queue: std.ArrayList(VmaBufferDeleter) = undefined,
+    image_deletion_queue: std.ArrayList(VmaImageDeleter) = undefined,
+
     const Self = @This();
+
+    pub const VulkanDeleter = struct {
+        object: ?*anyopaque,
+        delete_fn: *const fn(entry: *VulkanDeleter, self: *Self) void,
+
+        fn delete(self: *VulkanDeleter, engine: *Self) void {
+            self.delete_fn(self, engine);
+        }
+
+        fn make(object: anytype, func: anytype) VulkanDeleter {
+            const T = @TypeOf(object);
+            comptime {
+                std.debug.assert(@typeInfo(T) == .Optional);
+                const Ptr = @typeInfo(T).Optional.child;
+                std.debug.assert(@typeInfo(Ptr) == .Pointer);
+                std.debug.assert(@typeInfo(Ptr).Pointer.size == .One);
+
+                const Fn = @TypeOf(func);
+                std.debug.assert(@typeInfo(Fn) == .Fn);
+            }
+
+            return VulkanDeleter {
+                .object = object,
+                .delete_fn = struct {
+                    fn destroy_impl(entry: *VulkanDeleter, self: *Self) void {
+                        const obj: @TypeOf(object) = @ptrCast(entry.object);
+                        func(self.device, obj, vk_alloc_cbs);
+                    }
+                }.destroy_impl,
+            };
+        }
+    };
+
+    pub const VmaBufferDeleter = struct {
+        buffer: AllocatedBuffer,
+
+        fn delete(self: *VmaBufferDeleter, engine: *Self) void {
+            c.vmaDestroyBuffer(engine.vma_allocator, self.buffer.buffer, self.buffer.allocation);
+        }
+    };
+
+    pub const VmaImageDeleter = struct {
+        image: AllocatedImage,
+
+        fn delete(self: *VmaImageDeleter, engine: *Self) void {
+            c.vmaDestroyImage(engine.vma_allocator, self.image.image, self.image.allocation);
+        }
+    };
 
     pub fn init(allocator: std.mem.Allocator) !VkEngine {
         check_sdl(c.SDL_Init(c.SDL_INIT_VIDEO));
@@ -84,6 +152,7 @@ pub const VkEngine = struct {
             catch @panic("Failed to create VMA allocator");
         
         // TODO create swapchain
+        try engine.init_swapchain();
 
         // TODO create commands
 
@@ -201,6 +270,39 @@ pub const VkEngine = struct {
         self.device = device.handle;
         self.graphics_queue = device.graphics_queue;
         self.present_queue = device.present_queue;
+    }
+
+    fn init_swapchain(self: *VkEngine) !void {
+        var win_width: c_int = undefined;
+        var win_height: c_int = undefined;
+        check_sdl(c.SDL_GetWindowSize(self.window, &win_width, &win_height));
+
+        // Create a swapchain
+        // const swapchain = vki.create_swapchain(self.allocator, .{
+        //     .physical_device = self.physical_device,
+        //     .graphics_queue_family = self.graphics_queue_family,
+        //     .present_queue_family = self.graphics_queue_family,
+        //     .device = self.device,
+        //     .surface = self.surface,
+        //     .old_swapchain = null ,
+        //     .vsync = true,
+        //     .window_width = @intCast(win_width),
+        //     .window_height = @intCast(win_height),
+        //     .alloc_cb = vk_alloc_cbs,
+        // }) catch @panic("Failed to create swapchain");
+
+        // self.swapchain = swapchain.handle;
+        // self.swapchain_format = swapchain.format;
+        // self.swapchain_extent = swapchain.extent;
+        // self.swapchain_images = swapchain.images;
+        // self.swapchain_image_views = swapchain.image_views;
+
+        // for (self.swapchain_image_views) |view|{
+        //     self.deletion_queue.append(VulkanDeleter.make(view, c.vkDestroyImageView)) catch @panic("Out of memory");
+        // }
+        // self.deletion_queue.append(VulkanDeleter.make(swapchain.handle, c.vkDestroySwapchainKHR)) catch @panic("Out of memory");
+
+        //log.info("Created swapchain", .{});
     }
 };
 

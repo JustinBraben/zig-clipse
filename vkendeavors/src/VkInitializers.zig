@@ -305,6 +305,224 @@ pub fn create_logical_device(
     };
 }
 
+/// Options for creating swapchain
+pub const SwapchainCreateOptions = struct {
+    physical_device: c.VkPhysicalDevice,
+    graphics_queue_family: u32,
+    present_queue_family: u32,
+    device: c.VkDevice,
+    surface: c.VkSurfaceKHR = null,
+    old_swapchain: c.VkSwapchainKHR = null,
+    vsync: bool = false,
+    triple_buffer: bool = false,
+    window_width: u32 = 0,
+    window_height: u32 = 0,
+    alloc_cb: ?*c.VkAllocationCallbacks = null,
+};
+
+/// Swapchain
+/// Must be made through create_swapchain
+pub const Swapchain = struct {
+    handle: c.VkSwapchainKHR = null,
+    images: []c.VkImage = &.{},
+    image_views: []c.VkImageView = &.{},
+    format: c.VkFormat = c.VK_FORMAT_UNDEFINED,
+    extent: c.VkExtent2D = undefined,
+};
+
+pub fn create_swapchain(a: std.mem.Allocator, options: SwapchainCreateOptions) !Swapchain {
+    const support_info = try SwapchainSupportInfo.init(a, options.physical_device, options.surface);
+    defer support_info.deinit(a);
+
+    const format = pick_swapchain_format(support_info.formats, options);
+    const present_mode = pick_swapchain_present_mode(support_info.present_modes, options);
+    const extent = make_swapchain_extent(support_info.capabilities, options);
+
+    const image_count = blk: {
+        const desired_count = support_info.capabilities.minImageCount + 1;
+        if (support_info.capabilities.maxImageCount > 0) {
+            break :blk @min(desired_count, support_info.capabilities.maxImageCount);
+        }
+        break :blk desired_count;
+    };
+
+    var swapchain_info = std.mem.zeroInit(c.VkSwapchainCreateInfoKHR, .{
+        .sType = c.VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = options.surface,
+        .minImageCount = image_count,
+        .imageFormat = format,
+        .imageColorSpace = c.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR,
+        .imageExtent = extent,
+        .imageArrayLayers = 1,
+        .imageUsage = c.VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        .preTransform = support_info.capabilities.currentTransform,
+        .compositeAlpha = c.VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+        .presentMode = present_mode,
+        .clipped = c.VK_TRUE,
+        .oldSwapchain = options.old_swapchain,
+    });
+
+    if (options.graphics_queue_family != options.present_queue_family) {
+        const queue_family_indices: []const u32 = &.{
+            options.graphics_queue_family,
+            options.present_queue_family,
+        };
+        swapchain_info.imageSharingMode = c.VK_SHARING_MODE_CONCURRENT;
+        swapchain_info.queueFamilyIndexCount = 2;
+        swapchain_info.pQueueFamilyIndices = queue_family_indices.ptr;
+    } else {
+        swapchain_info.imageSharingMode = c.VK_SHARING_MODE_EXCLUSIVE;
+    }
+
+    var swapchain: c.VkSwapchainKHR = undefined;
+    try check_vk(c.vkCreateSwapchainKHR(options.device, &swapchain_info, options.alloc_cb, &swapchain));
+    errdefer c.vkDestroySwapchainKHR(options.device, swapchain, options.alloc_cb);
+    log.info("Created vulkan swapchain.", .{});
+
+    // Try and fetch the images from the swpachain.
+    var swapchain_image_count: u32 = undefined;
+    try check_vk(c.vkGetSwapchainImagesKHR(options.device, swapchain, &swapchain_image_count, null));
+    const swapchain_images = try a.alloc(c.VkImage, swapchain_image_count);
+    errdefer a.free(swapchain_images);
+    try check_vk(c.vkGetSwapchainImagesKHR(options.device, swapchain, &swapchain_image_count, swapchain_images.ptr));
+
+    // Create image views for the swapchain images.
+    const swapchain_image_views = try a.alloc(c.VkImageView, swapchain_image_count);
+    errdefer a.free(swapchain_image_views);
+
+    for (swapchain_images, swapchain_image_views) |image, *view| {
+        view.* = try create_image_view(options.device, image, format, c.VK_IMAGE_ASPECT_COLOR_BIT, options.alloc_cb);
+    }
+
+    return .{
+        .handle = swapchain,
+        .images = swapchain_images,
+        .image_views = swapchain_image_views,
+        .format = format,
+        .extent = extent,
+    };
+}
+
+fn pick_swapchain_format(formats: []const c.VkSurfaceFormatKHR, options: SwapchainCreateOptions) c.VkFormat {
+    // TODO: Add support for specifying desired format.
+    _ = options;
+    for (formats) |format| {
+        if (format.format == c.VK_FORMAT_B8G8R8A8_SRGB and
+            format.colorSpace == c.VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+            return format.format;
+        }
+    }
+
+    return formats[0].format;
+}
+
+fn pick_swapchain_present_mode(modes: []const c.VkPresentModeKHR, options: SwapchainCreateOptions) c.VkPresentModeKHR {
+    if (options.vsync == false) {
+        // Prefer immediate mode if present.
+        for (modes) |mode| {
+            if (mode == c.VK_PRESENT_MODE_IMMEDIATE_KHR) {
+                return mode;
+            }
+        }
+        log.info("Immediate present mode is not possible. Falling back to vsync", .{});
+    }
+
+    // Prefer triple buffering if possible.
+    for (modes) |mode| {
+        if (mode == c.VK_PRESENT_MODE_MAILBOX_KHR and options.triple_buffer) {
+            return mode;
+        }
+    }
+
+    // If nothing else is present, FIFO is guaranteed to be available by the specs.
+    return c.VK_PRESENT_MODE_FIFO_KHR;
+}
+
+fn make_swapchain_extent(capabilities: c.VkSurfaceCapabilitiesKHR, options: SwapchainCreateOptions) c.VkExtent2D {
+    if (capabilities.currentExtent.width != std.math.maxInt(u32)) {
+        return capabilities.currentExtent;
+    }
+
+    var extent = c.VkExtent2D{
+        .width = options.window_width,
+        .height = options.window_height,
+    };
+
+    extent.width = @max(
+        capabilities.minImageExtent.width,
+        @min(capabilities.maxImageExtent.width, extent.width));
+    extent.height = @max(
+        capabilities.minImageExtent.height,
+        @min(capabilities.maxImageExtent.height, extent.height));
+
+    return extent;
+}
+
+const SwapchainSupportInfo = struct {
+    capabilities: c.VkSurfaceCapabilitiesKHR = undefined,
+    formats: []c.VkSurfaceFormatKHR = &.{},
+    present_modes: []c.VkPresentModeKHR = &.{},
+
+    fn init(a: std.mem.Allocator, device: c.VkPhysicalDevice, surface: c.VkSurfaceKHR) !SwapchainSupportInfo {
+        var capabilities: c.VkSurfaceCapabilitiesKHR = undefined;
+        try check_vk(c.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &capabilities));
+
+        var format_count: u32 = undefined;
+        try check_vk(c.vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, null));
+        const formats = try a.alloc(c.VkSurfaceFormatKHR, format_count);
+        try check_vk(c.vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &format_count, formats.ptr));
+
+        var present_mode_count: u32 = undefined;
+        try check_vk(c.vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, null));
+        const present_modes = try a.alloc(c.VkPresentModeKHR, present_mode_count);
+        try check_vk(c.vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &present_mode_count, present_modes.ptr));
+
+        return .{
+            .capabilities = capabilities,
+            .formats = formats,
+            .present_modes = present_modes,
+        };
+    }
+
+    fn deinit(self: *const SwapchainSupportInfo, a: std.mem.Allocator) void {
+        a.free(self.formats);
+        a.free(self.present_modes);
+    }
+};
+
+fn create_image_view(
+    device: c.VkDevice,
+    image: c.VkImage,
+    format: c.VkFormat,
+    aspect_flags: c.VkImageAspectFlags,
+    alloc_cb: ?*c.VkAllocationCallbacks
+) !c.VkImageView {
+    const view_info = std.mem.zeroInit(c.VkImageViewCreateInfo, .{
+        .sType = c.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .image = image,
+        .viewType = c.VK_IMAGE_VIEW_TYPE_2D,
+        .format = format,
+        .components = .{
+            .r = c.VK_COMPONENT_SWIZZLE_IDENTITY,
+            .g = c.VK_COMPONENT_SWIZZLE_IDENTITY,
+            .b = c.VK_COMPONENT_SWIZZLE_IDENTITY,
+            .a = c.VK_COMPONENT_SWIZZLE_IDENTITY
+        },
+        .subresourceRange = .{
+            .aspectMask = aspect_flags,
+            .baseMipLevel = 0,
+            .levelCount = 1,
+            .baseArrayLayer = 0,
+            .layerCount = 1,
+        },
+    });
+
+    var image_view: c.VkImageView = undefined;
+    try check_vk(c.vkCreateImageView(device, &view_info, alloc_cb, &image_view));
+    return image_view;
+}
+
 pub fn create_instance(allocator: std.mem.Allocator, options: VkiInstanceOptions) !Instance {
     // Check the api version is supported
     if (options.api_version > c.VK_MAKE_VERSION(1, 0, 0)) {
