@@ -658,6 +658,11 @@ fn create_debug_callback(instance: c.VkInstance, options: VkiInstanceOptions) !c
     return null;
 }
 
+pub fn get_destroy_debug_utils_messenger_fn(instance: c.VkInstance) c.PFN_vkDestroyDebugUtilsMessengerEXT {
+    return get_vulkan_instance_funct(
+        c.PFN_vkDestroyDebugUtilsMessengerEXT, instance, "vkDestroyDebugUtilsMessengerEXT");
+}
+
 fn default_debug_callback(
     severity: c.VkDebugUtilsMessageSeverityFlagBitsEXT,
     msg_type: c.VkDebugUtilsMessageTypeFlagsEXT,

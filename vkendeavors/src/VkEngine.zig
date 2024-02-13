@@ -13,16 +13,6 @@ const VK_NULL_HANDLE = null;
 
 const vk_alloc_cbs: ?*c.VkAllocationCallbacks = null;
 
-pub const AllocatedBuffer = struct {
-    buffer: c.VkBuffer,
-    allocation: c.VmaAllocation,
-};
-
-pub const AllocatedImage = struct {
-    image: c.VkImage,
-    allocation: c.VmaAllocation,
-};
-
 pub const VkEngine = struct {
     allocator: std.mem.Allocator = undefined,
 
@@ -47,6 +37,10 @@ pub const VkEngine = struct {
     present_queue: c.VkQueue = VK_NULL_HANDLE,
     present_queue_family: u32 = undefined,
 
+    depth_image_view: c.VkImageView = VK_NULL_HANDLE,
+    depth_image: AllocatedImage = undefined,
+    depth_format: c.VkFormat = undefined,
+
     window: *c.SDL_Window = undefined,
 
     frame_number: u64 = 0,
@@ -60,6 +54,16 @@ pub const VkEngine = struct {
     image_deletion_queue: std.ArrayList(VmaImageDeleter) = undefined,
 
     const Self = @This();
+
+    pub const AllocatedBuffer = struct {
+        buffer: c.VkBuffer,
+        allocation: c.VmaAllocation,
+    };
+
+    pub const AllocatedImage = struct {
+        image: c.VkImage,
+        allocation: c.VmaAllocation,
+    };
 
     pub const VulkanDeleter = struct {
         object: ?*anyopaque,
@@ -130,6 +134,9 @@ pub const VkEngine = struct {
         var engine = Self{
             .window = window,
             .allocator = allocator,
+            .deletion_queue = std.ArrayList(VulkanDeleter).init(allocator),
+            .buffer_deletion_queue = std.ArrayList(VmaBufferDeleter).init(allocator),
+            .image_deletion_queue = std.ArrayList(VmaImageDeleter).init(allocator),
             .frame_number = 0,
             .is_initialized = false,
         };
@@ -204,6 +211,36 @@ pub const VkEngine = struct {
     }
 
     pub fn deinit(self: *VkEngine) void {
+        check_vk(c.vkDeviceWaitIdle(self.device)) catch @panic("Failed to wait for device idle");
+        for (self.buffer_deletion_queue.items) |*entry| {
+            entry.delete(self);
+        }
+        self.buffer_deletion_queue.deinit();
+
+        for (self.image_deletion_queue.items) |*entry| {
+            entry.delete(self);
+        }
+        self.image_deletion_queue.deinit();
+
+        for (self.deletion_queue.items) |*entry| {
+            entry.delete(self);
+        }
+        self.deletion_queue.deinit();
+        
+        self.allocator.free(self.swapchain_image_views);
+        self.allocator.free(self.swapchain_images);
+
+        c.vmaDestroyAllocator(self.vma_allocator);
+
+        c.vkDestroyDevice(self.device, vk_alloc_cbs);
+        c.vkDestroySurfaceKHR(self.instance, self.surface, vk_alloc_cbs);
+
+        if (self.debug_messenger != VK_NULL_HANDLE) {
+            const destroy_fn = vki.get_destroy_debug_utils_messenger_fn(self.instance).?;
+            destroy_fn(self.instance, self.debug_messenger, vk_alloc_cbs);
+        }
+
+        c.vkDestroyInstance(self.instance, vk_alloc_cbs);
         c.SDL_DestroyWindow(self.window);
     }
 
@@ -278,31 +315,85 @@ pub const VkEngine = struct {
         check_sdl(c.SDL_GetWindowSize(self.window, &win_width, &win_height));
 
         // Create a swapchain
-        // const swapchain = vki.create_swapchain(self.allocator, .{
-        //     .physical_device = self.physical_device,
-        //     .graphics_queue_family = self.graphics_queue_family,
-        //     .present_queue_family = self.graphics_queue_family,
-        //     .device = self.device,
-        //     .surface = self.surface,
-        //     .old_swapchain = null ,
-        //     .vsync = true,
-        //     .window_width = @intCast(win_width),
-        //     .window_height = @intCast(win_height),
-        //     .alloc_cb = vk_alloc_cbs,
-        // }) catch @panic("Failed to create swapchain");
+        const swapchain = vki.create_swapchain(self.allocator, .{
+            .physical_device = self.physical_device,
+            .graphics_queue_family = self.graphics_queue_family,
+            .present_queue_family = self.graphics_queue_family,
+            .device = self.device,
+            .surface = self.surface,
+            .old_swapchain = null ,
+            .vsync = true,
+            .window_width = @intCast(win_width),
+            .window_height = @intCast(win_height),
+            .alloc_cb = vk_alloc_cbs,
+        }) catch @panic("Failed to create swapchain");
 
-        // self.swapchain = swapchain.handle;
-        // self.swapchain_format = swapchain.format;
-        // self.swapchain_extent = swapchain.extent;
-        // self.swapchain_images = swapchain.images;
-        // self.swapchain_image_views = swapchain.image_views;
+        self.swapchain = swapchain.handle;
+        self.swapchain_format = swapchain.format;
+        self.swapchain_extent = swapchain.extent;
+        self.swapchain_images = swapchain.images;
+        self.swapchain_image_views = swapchain.image_views;
 
-        // for (self.swapchain_image_views) |view|{
-        //     self.deletion_queue.append(VulkanDeleter.make(view, c.vkDestroyImageView)) catch @panic("Out of memory");
-        // }
-        // self.deletion_queue.append(VulkanDeleter.make(swapchain.handle, c.vkDestroySwapchainKHR)) catch @panic("Out of memory");
+        for (self.swapchain_image_views) |view|{
+            self.deletion_queue.append(VulkanDeleter.make(view, c.vkDestroyImageView)) catch @panic("Out of memory");
+        }
+        self.deletion_queue.append(VulkanDeleter.make(swapchain.handle, c.vkDestroySwapchainKHR)) catch @panic("Out of memory");
 
-        //log.info("Created swapchain", .{});
+        log.info("Created swapchain", .{});
+
+        // Create depth image to associate with the swapchain
+        const extent = c.VkExtent3D {
+            .width = self.swapchain_extent.width,
+            .height = self.swapchain_extent.height,
+            .depth = 1,
+        };
+
+        // Hard-coded 32-bit float depth format
+        self.depth_format = c.VK_FORMAT_D32_SFLOAT;
+
+        const depth_image_ci = std.mem.zeroInit(c.VkImageCreateInfo, .{
+            .sType = c.VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+            .imageType = c.VK_IMAGE_TYPE_2D,
+            .format = self.depth_format,
+            .extent = extent,
+            .mipLevels = 1,
+            .arrayLayers = 1,
+            .samples = c.VK_SAMPLE_COUNT_1_BIT,
+            .tiling = c.VK_IMAGE_TILING_OPTIMAL,
+            .usage = c.VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            .sharingMode = c.VK_SHARING_MODE_EXCLUSIVE,
+            .initialLayout = c.VK_IMAGE_LAYOUT_UNDEFINED,
+        });
+
+        const depth_image_ai = std.mem.zeroInit(c.VmaAllocationCreateInfo, .{
+            .usage = c.VMA_MEMORY_USAGE_GPU_ONLY,
+            .requiredFlags = c.VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+        });
+
+        check_vk(c.vmaCreateImage(self.vma_allocator, &depth_image_ci, &depth_image_ai, &self.depth_image.image, &self.depth_image.allocation, null))
+            catch @panic("Failed to create depth image");
+
+        const depth_image_view_ci = std.mem.zeroInit(c.VkImageViewCreateInfo, .{
+            .sType = c.VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+            .image = self.depth_image.image,
+            .viewType = c.VK_IMAGE_VIEW_TYPE_2D,
+            .format = self.depth_format,
+            .subresourceRange = .{
+                .aspectMask = c.VK_IMAGE_ASPECT_DEPTH_BIT,
+                .baseMipLevel = 0,
+                .levelCount = 1,
+                .baseArrayLayer = 0,
+                .layerCount = 1,
+            },
+        });
+
+        check_vk(c.vkCreateImageView(self.device, &depth_image_view_ci, vk_alloc_cbs, &self.depth_image_view))
+            catch @panic("Failed to create depth image view");
+
+        self.deletion_queue.append(VulkanDeleter.make(self.depth_image_view, c.vkDestroyImageView)) catch @panic("Out of memory");
+        self.image_deletion_queue.append(VmaImageDeleter{ .image = self.depth_image }) catch @panic("Out of memory");
+
+        log.info("Created depth image", .{});
     }
 };
 
