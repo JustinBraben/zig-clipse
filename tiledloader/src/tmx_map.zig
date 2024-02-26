@@ -3,6 +3,8 @@ const xml = @import("xml.zig");
 const Tileset = @import("tmx_tileset.zig").Tileset;
 const Layer = @import("tmx_layer.zig").Layer;
 
+const log = std.log.scoped(.Tmx_Map);
+
 pub const Version = struct {
     major: u16 = 0,
     minor: u16 = 0,

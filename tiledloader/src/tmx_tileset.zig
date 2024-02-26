@@ -1,6 +1,8 @@
 const std = @import("std");
 const xml = @import("xml.zig");
 
+const log = std.log.scoped(.Tmx_Tileset);
+
 pub const Frame = struct {
     tile_id: u32,
     duration: u32,

@@ -4,6 +4,8 @@ const zlib = std.compress.zlib;
 
 const native_endian = @import("builtin").target.cpu.arch.endian();
 
+const log = std.log.scoped(.Tmx_Layer);
+
 pub const Data = struct {
     backing_allocator: std.mem.Allocator,
     encoding: []const u8,

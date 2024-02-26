@@ -18,7 +18,7 @@ pub const Display = struct {
         if (c.SDL_Init(c.SDL_INIT_VIDEO | c.SDL_INIT_AUDIO) != 0) {
             return error.SDLInitializationFailed;
         }
-
+        
         const window = c.SDL_CreateWindow(
             title,
             c.SDL_WINDOWPOS_UNDEFINED,
