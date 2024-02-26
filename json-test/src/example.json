@@ -1,4 +1,42 @@
 {
-    "name": "jquery.iframe-transport.js",
-    "age": 21
+    "sheet": {
+        "width": 352.0,
+        "height": 32.0
+    },
+    "animations": [
+        {
+            "id": "idle_1",
+            "size": [ 32.0, 32.0 ],
+            "world_pos": [ 96.0, 96.0 ],
+            "speed": 0.5,
+            "loop": true,
+            "frames": [
+                {
+                    "id": 0,
+                    "pos" : [ 0.0, 0.0 ]
+                },
+                {
+                    "id": 1,
+                    "pos" : [ 32.0, 0.0 ]
+                }
+            ]
+        },
+        {
+            "id": "idle_2",
+            "size": [ 32.0, 32.0 ],
+            "world_pos": [ 96.0, 96.0 ],
+            "speed": 0.5,
+            "loop": true,
+            "frames": [
+                {
+                    "id": 0,
+                    "pos" : [ 0.0, 32.0 ]
+                },
+                {
+                    "id": 1,
+                    "pos" : [ 32.0, 32.0 ]
+                }
+            ]
+        }
+    ]
 }
