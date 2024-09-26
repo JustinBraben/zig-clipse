@@ -16,7 +16,7 @@ pub fn build(b: *std.Build) void {
         // packages for now.
         exe.linkSystemLibrary("SDL2");
     } else {
-        const sdl_dep = b.dependency("SDL", .{
+        const sdl_dep = b.dependency("SDL2", .{
             .optimize = .ReleaseFast,
             .target = target,
         });
