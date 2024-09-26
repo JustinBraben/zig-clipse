@@ -2,11 +2,7 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-
     const optimize = b.standardOptimizeOption(.{});
-
-    const sdl_dep = b.dependency("SDL2", .{});
-    const sdl_image_dep = b.dependency("SDL_image", .{});
 
     const exe = b.addExecutable(.{
         .name = "tiledloader",
@@ -15,9 +11,24 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    if (target.result.os.tag == .linux) {
+        // The SDL package doesn't work for Linux yet, so we rely on system
+        // packages for now.
+        exe.linkSystemLibrary("SDL2");
+    } else {
+        const sdl_dep = b.dependency("SDL", .{
+            .optimize = .ReleaseFast,
+            .target = target,
+        });
+        const sdl_image_dep = b.dependency("SDL_Image", .{
+            .optimize = .ReleaseFast,
+            .target = target,
+        });
+        exe.linkLibrary(sdl_dep.artifact("SDL2"));
+        exe.linkLibrary(sdl_image_dep.artifact("SDL_Image"));
+    }
+
     exe.linkLibC();
-    exe.linkLibrary(sdl_dep.artifact("SDL2"));
-    exe.linkLibrary(sdl_image_dep.artifact("SDL_Image"));
 
     b.installArtifact(exe);
 

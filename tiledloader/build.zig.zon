@@ -6,7 +6,7 @@
             .url = "https://github.com/pwbh/SDL/archive/refs/tags/release-2.30.3.tar.gz",
             .hash = "12203d06a751586e5cf3f8b61f9a0012c70ada050ce33b6bf79d4741902f9c344239",
         }, 
-        .SDL_image = .{
+        .SDL_Image = .{
             .url = "https://github.com/JustinBraben/SDL_image/archive/3cf6119f4d7cfca90a4ae1c9fe910a4798105492.tar.gz",
             .hash = "12203199755c443f9d8b748022e323b82e2fbf1404f92995e196ac08ab1a1a67c0ef",
         },
