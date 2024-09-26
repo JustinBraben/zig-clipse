@@ -24,7 +24,7 @@ test "Cartridge name" {
     defer cart.deinit();
     
     var idx: usize = 0;
-    const expected_name: [:0]const u8 = "ZELDA";
+    const expected_name = "ZELDA";
     while (idx < cart.name.len) : (idx += 1) {
         if (idx < expected_name.len) {
             try testing.expectEqual(expected_name[idx], cart.name[idx]);
