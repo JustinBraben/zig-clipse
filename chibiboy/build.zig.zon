@@ -12,5 +12,9 @@
             .url = "https://github.com/pwbh/SDL/archive/refs/tags/release-2.30.3.tar.gz",
             .hash = "12203d06a751586e5cf3f8b61f9a0012c70ada050ce33b6bf79d4741902f9c344239",
         },
+        .clap = .{
+            .url = "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.9.1.tar.gz",
+            .hash = "122062d301a203d003547b414237229b09a7980095061697349f8bef41be9c30266b",
+        },
     },
 }

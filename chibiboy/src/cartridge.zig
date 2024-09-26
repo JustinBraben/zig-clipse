@@ -27,7 +27,7 @@ pub const Cartridge = struct {
     ram: []u8,
 
     logo: []u8,
-    name: []const u8,
+    name: [:0]const u8,
     is_gbc: bool,
     licensee: u16,
     is_sgb: bool,
@@ -44,11 +44,6 @@ pub const Cartridge = struct {
         var file = try fs.cwd().openFile(fileName, fs.File.OpenFlags{ .mode = .read_only });
         defer file.close();
 
-        // Old code that reads the file into a buffer
-        // var data = try allocator.alloc(u8, (try file.stat()).size);
-        // errdefer allocator.free(data);
-        // _ = try file.read(data[0..]);
-
         const data = try file.readToEndAlloc(allocator, (try file.stat()).size);
         errdefer allocator.free(data);
 
@@ -57,7 +52,7 @@ pub const Cartridge = struct {
             .data = data,
             .ram = try allocator.alloc(u8, parse_ram_size(data[0x0149])),
             .logo = data[0x0104 .. 0x0104 + 48],
-            .name = data[0x0134 .. 0x0134 + 15],
+            .name = data[0x0134 .. 0x0134 + 15 :0],
             .is_gbc = data[0x0143] == 0x80,
             .licensee = @as(u16, @intCast(data[0x0144])) << 8 | @as(u16, @intCast(data[0x0145])),
             .is_sgb = data[0x0146] == 0x03,
