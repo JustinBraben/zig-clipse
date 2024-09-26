@@ -7,7 +7,7 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "vkendeavors",
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) void {
     exe.addLibraryPath(.{ .cwd_relative = "thirdparty/SDL3/lib" });
     exe.addIncludePath(.{ .cwd_relative = "thirdparty/sdl3/include" });
 
-    if (b.env_map.get("VK_SDK_PATH")) |path| {
+    if (b.graph.env_map.get("VK_SDK_PATH")) |path| {
         // VK_SDK_PATH is set, you can use it
         std.debug.print("VK_SDK_PATH is set: {s}\n", .{path});
 
@@ -30,11 +30,12 @@ pub fn build(b: *std.Build) void {
         std.debug.print("VK_SDK_PATH environment variable is not set. Vulkan headers may not be found.\n", .{});
         // You may want to handle this case or provide instructions to the user
     }
-    exe.addCSourceFile(.{ .file = .{ .path = "src/vk_mem_alloc.cpp" }, .flags = &.{""} });
-    exe.addIncludePath(.{ .path = "thirdparty/vma/" });
-    exe.addCSourceFile(.{ .file = .{ .path = "src/stb_image.c" }, .flags = &.{""} });
-    exe.addIncludePath(.{ .path = "thirdparty/stb/" });
-    exe.addIncludePath(.{ .path = "thirdparty/imgui/" });
+    // exe.addCSourceFile(.{ .file = .{ .src_path = .path("src/vk_mem_alloc.cpp")}, .flags = &.{""} });
+    exe.addCSourceFile(.{ .file = b.path("src/vk_mem_alloc.cpp"), .flags = &.{""} });
+    exe.addIncludePath(b.path("thirdparty/vma/"));
+    exe.addCSourceFile(.{ .file = b.path("src/stb_image.c"), .flags = &.{""} });
+    exe.addIncludePath(b.path("thirdparty/stb/"));
+    exe.addIncludePath(b.path("thirdparty/imgui/"));
 
     exe.linkLibCpp();
 
@@ -57,9 +58,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    imgui_lib.addIncludePath(.{ .path = "thirdparty/imgui/" });
-    imgui_lib.addIncludePath(.{ .path = "thirdparty/sdl3/include/" });
-    if (b.env_map.get("VK_SDK_PATH")) |path| {
+    imgui_lib.addIncludePath(b.path("thirdparty/imgui/"));
+    imgui_lib.addIncludePath(b.path("thirdparty/sdl3/include/"));
+    if (b.graph.env_map.get("VK_SDK_PATH")) |path| {
         imgui_lib.addLibraryPath(.{ .cwd_relative = std.fmt.allocPrint(b.allocator, "{s}/Lib", .{path}) catch @panic("OOM") });
         imgui_lib.addIncludePath(.{ .cwd_relative = std.fmt.allocPrint(b.allocator, "{s}/Include", .{path}) catch @panic("OOM") });
     } else {
@@ -96,7 +97,7 @@ pub fn build(b: *std.Build) void {
     run_step.dependOn(&run_cmd.step);
 
     const lib_unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/root.zig" },
+        .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
@@ -104,7 +105,7 @@ pub fn build(b: *std.Build) void {
     const run_lib_unit_tests = b.addRunArtifact(lib_unit_tests);
 
     const exe_unit_tests = b.addTest(.{
-        .root_source_file = .{ .path = "src/main.zig" },
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });

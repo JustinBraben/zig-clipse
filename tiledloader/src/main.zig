@@ -7,8 +7,6 @@ const Map = @import("tmx_map.zig").Map;
 
 const c = @import("clibs.zig");
 
-const zigimg = @import("zigimg");
-
 const print = std.debug.print;
 
 pub fn main() !void {

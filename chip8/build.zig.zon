@@ -9,9 +9,9 @@
         "build.zig.zon",
     },
     .dependencies = .{
-        .sdl = .{
-            .url = "https://github.com/fabioarnold/SDL/archive/db4a162db2f6f59f737d03f441455dc9524d5793.tar.gz",
-            .hash = "1220c5360c9c71c215baa41b46ec18d0711059b48416a2b1cf96c7c2d87b2e8e4cf6",
+        .SDL2 = .{
+            .url = "https://github.com/pwbh/SDL/archive/refs/tags/release-2.30.3.tar.gz",
+            .hash = "12203d06a751586e5cf3f8b61f9a0012c70ada050ce33b6bf79d4741902f9c344239",
         },
     },
 }

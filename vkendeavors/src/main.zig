@@ -7,9 +7,9 @@ pub fn main() !void {
         @panic("Leaked memory");
     };
 
-    var cwd_buff: [1024]u8 = undefined;
-    const cwd = std.os.getcwd(cwd_buff[0..]) catch @panic("cwd_buff too small");
-    std.log.info("Running from: {s}", .{ cwd });
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+	const path = try std.fs.realpath(".", &buf);
+	std.log.info("Running from: {s}", .{ path });
 
     var engine = try VkEngine.init(gpa.allocator());
     defer engine.deinit();

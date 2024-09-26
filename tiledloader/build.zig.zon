@@ -2,16 +2,18 @@
     .name = "tiledloader",
     .version = "0.0.1",
     .dependencies = .{
-        .sdl = .{
-            .url = "https://github.com/fabioarnold/SDL/archive/db4a162db2f6f59f737d03f441455dc9524d5793.tar.gz",
-            .hash = "1220c5360c9c71c215baa41b46ec18d0711059b48416a2b1cf96c7c2d87b2e8e4cf6",
-        },
-        .zigimg = .{
-            .url = "https://github.com/zigimg/zigimg/archive/2224f91ea4cf70f2254848657e308761b8cc8c5d.tar.gz",
-            .hash = "12207067e4892c48369415268648380859baa89c324748ae5bfda414a12868c9fc8b",
+        .SDL2 = .{
+            .url = "https://github.com/pwbh/SDL/archive/refs/tags/release-2.30.3.tar.gz",
+            .hash = "12203d06a751586e5cf3f8b61f9a0012c70ada050ce33b6bf79d4741902f9c344239",
+        }, 
+        .SDL_image = .{
+            .url = "https://github.com/JustinBraben/SDL_image/archive/3cf6119f4d7cfca90a4ae1c9fe910a4798105492.tar.gz",
+            .hash = "12203199755c443f9d8b748022e323b82e2fbf1404f92995e196ac08ab1a1a67c0ef",
         },
     },
     .paths = .{
-        "",
+        "build.zig",
+        "build.zig.zon",
+        "src",
     },
 }

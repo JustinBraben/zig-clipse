@@ -15,9 +15,9 @@ pub fn main() !void {
 
     var parse_args = try Args.init(gpa);
     defer parse_args.deinit();
-    print("Rom arg : {s}\n", .{parse_args.rom});
+    // print("Rom arg : {s}\n", .{parse_args.rom});
 
-    var gameboy: GameBoy = undefined;
-    gameboy = try GameBoy.init(gpa, parse_args);
-    defer gameboy.deinit();
+    // var gameboy: GameBoy = undefined;
+    // gameboy = try GameBoy.init(gpa, parse_args);
+    // defer gameboy.deinit();
 }

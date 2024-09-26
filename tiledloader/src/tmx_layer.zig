@@ -46,8 +46,7 @@ pub const Data = struct {
                     try codecs.Decoder.decode(decoded_bytes, trim_data);
 
                     var in_stream = std.io.fixedBufferStream(decoded_bytes);
-                    var zlib_stream = try std.compress.zlib.decompressStream(backing_allocator, in_stream.reader());
-                    defer zlib_stream.deinit();
+                    var zlib_stream = std.compress.zlib.decompressor(in_stream.reader());
 
                     const decompressed_data = try zlib_stream.reader().readAllAlloc(backing_allocator, std.math.maxInt(usize));
 

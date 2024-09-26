@@ -1,65 +1,50 @@
 const std = @import("std");
 
+const examples = [_][]const u8 {
+    "basic",
+    "complex",
+};
+
 pub fn build(b: *std.Build) void {
-    const reflect_mod = b.addModule("reflect", .{ .root_source_file = .{ .path = "reflect.zig" } });
-
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
-
-    const test_step = b.step("test", "Run all tests in all modes.");
-    const tests = b.addTest(.{
-        .root_source_file = .{ .path = "reflect.zig" },
-        .target = target,
-        .optimize = optimize,
-    });
-    const run_tests = b.addRunArtifact(tests);
-    test_step.dependOn(&run_tests.step);
-
-    // TODO: make examples to run
-    const example_step = b.step("examples", "Build examples.");
-    for ([_][]const u8{
-        "basic",
-        "complex",
-        // "enum",
-        // "flag",
-        // "positional",
-        // "required",
-        // "subcommand",
-        // "usage",
-    }) |example_name| {
-        const example = b.addExecutable(.{
-            .name = example_name,
-            .root_source_file = .{ .path = b.fmt("examples/{s}.zig", .{example_name}) },
-            .target = target,
-            .optimize = optimize,
-        });
-        const install_example = b.addInstallArtifact(example, .{});
-        example.root_module.addImport("reflect", reflect_mod);
-        example_step.dependOn(&example.step);
-        example_step.dependOn(&install_example.step);
-    }
-
-    const docs_step = b.step("docs", "Generate docs.");
-    const install_docs = b.addInstallDirectory(.{
-        .source_dir = tests.getEmittedDocs(),
-        .install_dir = .prefix,
-        .install_subdir = "docs",
-    });
-    docs_step.dependOn(&install_docs.step);
-
-    // TODO: make readme step
-    // const readme_step = b.step("readme", "Remake README.");
-    // const readme = readMeStep(b);
-    // readme.dependOn(example_step);
-    // readme_step.dependOn(readme);
+    const example_step = addExamples(b);
 
     const all_step = b.step("all", "Build everything and runs all tests");
-    all_step.dependOn(test_step);
     all_step.dependOn(example_step);
-    //all_step.dependOn(readme_step);
 
     b.default_step.dependOn(all_step);
 }
+
+fn addExamples(b: *std.Build) *std.Build.Step {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+
+    const example_step = b.step("examples", "Build examples");
+
+    inline for (examples) |example_name| {
+        const example = b.addExecutable(.{
+            .name = example_name,
+            .root_source_file = b.path("examples/" ++ example_name ++ ".zig"),
+            .target = target,
+            .optimize = optimize,
+        });
+
+        const reflect_mod = b.addModule("reflect", .{ .root_source_file = b.path("reflect.zig") });
+        example.root_module.addImport("reflect", reflect_mod);
+
+        const compile_step = b.step(example_name, "Build " ++ example_name);
+        compile_step.dependOn(&b.addInstallArtifact(example, .{}).step);
+        b.getInstallStep().dependOn(compile_step);
+
+        const run_cmd = b.addRunArtifact(example);
+        run_cmd.step.dependOn(compile_step);
+
+        const run_step = b.step("run-" ++ example_name, "Run " ++ example_name);
+        run_step.dependOn(&run_cmd.step);
+    }
+
+    return example_step;
+}
+
 
 fn readMeStep(b: *std.Build) *std.Build.Step {
     const s = b.allocator.create(std.Build.Step) catch unreachable;

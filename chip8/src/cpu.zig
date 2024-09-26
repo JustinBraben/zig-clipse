@@ -249,7 +249,7 @@ pub const CPU = struct {
                 // Get the operating system
                 // to generate a random seed
                 var seed: u64 = 11111;
-                std.os.getrandom(std.mem.asBytes(&seed)) catch {};
+                std.posix.getrandom(std.mem.asBytes(&seed)) catch {};
 
                 // Generate a random number
                 var rnd = std.rand.DefaultPrng.init(seed);
