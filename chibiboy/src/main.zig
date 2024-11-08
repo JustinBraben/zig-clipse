@@ -13,9 +13,9 @@ const c = @import("clibs.zig");
 const print = std.debug.print;
 
 pub fn main() !void {
-    var gpa_allocator = std.heap.GeneralPurposeAllocator(.{}){};
-    defer std.testing.expect(gpa_allocator.deinit() != .leak) catch @panic("memory leak");
-    const gpa = gpa_allocator.allocator();
+    var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa_impl.deinit();
+    const gpa = gpa_impl.allocator();
 
     var args = try Args.parse_args(gpa);
     defer args.deinit();
@@ -25,5 +25,7 @@ pub fn main() !void {
     var gameboy = try GameBoy.init(gpa, args);
     defer gameboy.deinit();
 
-    print("gameboy.cartridge.name: {s}, len: {d}\n", .{gameboy.cartridge.name, gameboy.cartridge.name.len});
+    print("gameboy.cartridge.name: {s} , len: {d}\n", .{gameboy.cartridge.name, gameboy.cartridge.name.len});
+
+    try gameboy.run();
 }
