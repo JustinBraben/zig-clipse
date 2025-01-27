@@ -3,6 +3,7 @@ const Args = @import("args.zig").Args;
 const Cartridge = @import("cartridge.zig").Cartridge;
 const RAM = @import("ram.zig").RAM;
 const CPU = @import("cpu.zig").CPU;
+const GPU = @import("gpu.zig").GPU;
 
 const print = std.debug.print;
 
