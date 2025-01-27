@@ -1,6 +1,7 @@
 const std = @import("std");
 const testing = std.testing;
-const Cartridge = @import("chibiboy").Cartridge;
+const Chibiboy = @import("chibiboy");
+const Cartridge = Chibiboy.Cartridge;
 
 test "Cartridge logo" {
     const testing_allocator = std.testing.allocator;
