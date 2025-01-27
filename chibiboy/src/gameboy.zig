@@ -31,11 +31,13 @@ pub const GameBoy = struct {
     }
 
     pub fn run(self: *GameBoy) !void {
-        _ = self; // autofix
         print("GameBoy is now running\n", .{});
+        while (true) {
+            try self.tick();
+        }
     }
 
     pub fn tick(self: *GameBoy) !void {
-        _ = self; // autofix
+        try self.cpu.tick();
     }
 };

@@ -49,4 +49,8 @@ pub const CPU = struct {
             .ram = ram
         };
     }
+
+    pub fn tick(self: *CPU) !void {
+        _ = self;
+    }
 };
