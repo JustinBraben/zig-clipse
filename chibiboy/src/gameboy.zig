@@ -27,6 +27,7 @@ pub const GameBoy = struct {
     }
 
     pub fn deinit(self: *GameBoy) void {
+        print("GameBoy deinit called\n", .{});
         self.cartridge.deinit();
     }
 
