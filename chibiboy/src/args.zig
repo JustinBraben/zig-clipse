@@ -75,8 +75,6 @@ pub const Args = struct {
         var rom: []const u8 = "";
         for (res.positionals[0]) |pos|{
             rom = try ally.dupe(u8, pos);
-            // _ = &rom;
-            // std.debug.print("{s}\n", .{pos});
         }
 
         return Args{

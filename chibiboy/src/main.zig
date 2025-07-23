@@ -5,7 +5,7 @@ const builtin = std.builtin;
 
 const Args = @import("args.zig").Args;
 const clap = @import("clap");
-const GameBoy = @import("gameboy.zig").GameBoy;
+const Emu = @import("emu.zig").Emu;
 const errors = @import("errors.zig");
 
 const c = @import("clibs.zig");
@@ -22,10 +22,10 @@ pub fn main() !void {
 
     print("args.rom: {s}\n", .{args.rom});
 
-    var gameboy = try GameBoy.init(gpa, args);
-    defer gameboy.deinit();
+    var emu = try Emu.init(gpa, args);
+    defer emu.deinit();
 
-    print("gameboy.cartridge.name: {s} , len: {d}\n", .{gameboy.cartridge.name, gameboy.cartridge.name.len});
+    print("emu.cartridge.name: {s} , len: {d}\n", .{emu.cartridge.name, emu.cartridge.name.len});
 
-    try gameboy.run();
+    try emu.run();
 }

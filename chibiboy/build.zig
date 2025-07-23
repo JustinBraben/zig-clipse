@@ -31,10 +31,14 @@ pub fn build(b: *std.Build) void {
 
     if (target.query.isNativeOs() and target.result.os.tag == .linux) {
         exe.linkSystemLibrary("SDL2");
+        exe.linkSystemLibrary("SDL2_ttf");
         exe.linkLibC();
     } else {
         const sdl_dep = b.dependency("SDL", .{ .target = target, .optimize = optimize });
         exe.linkLibrary(sdl_dep.artifact("SDL2"));
+
+        const sdl2_ttf_dep = b.dependency("SDL2_ttf", .{ .target = target, .optimize = optimize });
+        exe.linkLibrary(sdl2_ttf_dep.artifact("SDL2_ttf"));
     }
 
     b.installArtifact(exe);

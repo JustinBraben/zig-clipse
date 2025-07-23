@@ -5,7 +5,7 @@ const Cartridge = Chibiboy.Cartridge;
 
 test "Cartridge logo" {
     const testing_allocator = std.testing.allocator;
-    var cart = try Cartridge.init(testing_allocator, "./roms/Legend of Zelda, The - Link's Awakening (G) [!].gb");
+    var cart = try Cartridge.init(testing_allocator, "roms/cgb_sound/cgb_sound.gb");
     defer cart.deinit();
 
     const expected_logo = [_]u8{ 
@@ -14,21 +14,14 @@ test "Cartridge logo" {
         0xbb, 0xbb, 0x67, 0x63, 0x6e, 0x0e, 0xec, 0xcc, 0xdd, 0xdc, 0x99, 0x9f, 0xbb, 0xb9, 0x33, 0x3e 
     };
 
-    for (expected_logo, cart.logo) |expected, actual| {
-        try testing.expectEqual(expected, actual);
-    }
+    try testing.expectEqualSlices(u8, expected_logo[0..], cart.logo);
 }
 
 test "Cartridge name" {
     const testing_allocator = std.testing.allocator;
-    var cart = try Cartridge.init(testing_allocator, "./roms/Legend of Zelda, The - Link's Awakening (G) [!].gb");
+    var cart = try Cartridge.init(testing_allocator, "roms/cgb_sound/cgb_sound.gb");
     defer cart.deinit();
     
-    var idx: usize = 0;
-    const expected_name = "ZELDA";
-    while (idx < cart.name.len) : (idx += 1) {
-        if (idx < expected_name.len) {
-            try testing.expectEqual(expected_name[idx], cart.name[idx]);
-        }
-    }
+    const expected_name = "CGB_SOUND";
+    try testing.expectEqualSlices(u8, expected_name, cart.name[0..expected_name.len]);
 }
