@@ -41,30 +41,34 @@ pub const Cartridge = struct {
     complement_check: u8,
     checksum: u16,
 
-    pub fn init(allocator: std.mem.Allocator, fileName: []const u8) !Cartridge {
-        var file = try fs.cwd().openFile(fileName, fs.File.OpenFlags{ .mode = .read_only });
-        defer file.close();
+    pub fn init(allocator: std.mem.Allocator, file_name: []const u8) !Cartridge {
+        const input_file = try std.fs.cwd().openFile(file_name, .{}); 
+        defer input_file.close();
+        const file_stat = try input_file.stat();
 
-        const data = try file.readToEndAlloc(allocator, (try file.stat()).size);
-        errdefer allocator.free(data);
+        const file_contents = try input_file.readToEndAlloc(allocator, file_stat.size);
+        errdefer allocator.free(file_contents);
+
+        // Print file contents
+        // std.debug.print("{s}", .{file_contents});
 
         return Cartridge{
             .allocator = allocator,
-            .data = data,
-            .ram = try allocator.alloc(u8, parse_ram_size(data[0x0149])),
-            .logo = data[0x0104 .. 0x0104 + 48],
-            .name = data[0x0134 .. 0x0134 + 15],
-            .is_gbc = data[0x0143] == 0x80,
-            .licensee = @as(u16, @intCast(data[0x0144])) << 8 | @as(u16, @intCast(data[0x0145])),
-            .is_sgb = data[0x0146] == 0x03,
-            .cart_type = data[0x0147],
-            .rom_size = parse_rom_size(data[0x0148]),
-            .ram_size = parse_ram_size(data[0x0149]),
-            .destination = data[0x014A],
-            .old_licensee = data[0x014B],
-            .rom_version = data[0x014C],
-            .complement_check = data[0x014D],
-            .checksum = @as(u16, @intCast(data[0x014E])) << 8 | @as(u16, @intCast(data[0x14F])),
+            .data = file_contents,
+            .ram = try allocator.alloc(u8, parse_ram_size(file_contents[0x0149])),
+            .logo = file_contents[0x0104 .. 0x0104 + 48],
+            .name = file_contents[0x0134 .. 0x0134 + 15],
+            .is_gbc = file_contents[0x0143] == 0x80,
+            .licensee = @as(u16, @intCast(file_contents[0x0144])) << 8 | @as(u16, @intCast(file_contents[0x0145])),
+            .is_sgb = file_contents[0x0146] == 0x03,
+            .cart_type = file_contents[0x0147],
+            .rom_size = parse_rom_size(file_contents[0x0148]),
+            .ram_size = parse_ram_size(file_contents[0x0149]),
+            .destination = file_contents[0x014A],
+            .old_licensee = file_contents[0x014B],
+            .rom_version = file_contents[0x014C],
+            .complement_check = file_contents[0x014D],
+            .checksum = @as(u16, @intCast(file_contents[0x014E])) << 8 | @as(u16, @intCast(file_contents[0x14F])),
         };
     }
 
@@ -76,7 +80,7 @@ pub const Cartridge = struct {
 
 test "Cartridge logo" {
     const testing_allocator = std.testing.allocator;
-    var cart = try Cartridge.init(testing_allocator, "C:/Users/Justin/source/repos/zig-clipse/chibiboy/roms/cgb_sound/cgb_sound.gb");
+    var cart = try Cartridge.init(testing_allocator, "roms/cgb_sound/cgb_sound.gb");
     defer cart.deinit();
 
     const expected_logo = [_]u8{ 
@@ -92,7 +96,7 @@ test "Cartridge logo" {
 
 test "Cartridge name" {
     const testing_allocator = std.testing.allocator;
-    var cart = try Cartridge.init(testing_allocator, "C:/Users/Justin/source/repos/zig-clipse/chibiboy/roms/cgb_sound/cgb_sound.gb");
+    var cart = try Cartridge.init(testing_allocator, "roms/cgb_sound/cgb_sound.gb");
     defer cart.deinit();
     
     var idx: usize = 0;

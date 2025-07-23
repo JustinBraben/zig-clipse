@@ -21,23 +21,31 @@ pub const Args = struct {
     turbo: bool,
 
     pub fn parse_args(ally: Allocator) !Args {
-        const params = comptime [_]clap.Param(clap.Help){
-            clap.parseParam("-h, --help             Display this help and exit.") catch unreachable,
-            clap.parseParam("-H, --headless         Disable GUI") catch unreachable,
-            clap.parseParam("-S, --silent           Disable Sound") catch unreachable,
-            clap.parseParam("-c, --debug-cpu        Debug CPU") catch unreachable,
-            clap.parseParam("-g, --debug-gpu        Debug GPU") catch unreachable,
-            clap.parseParam("-a, --debug-apu        Debug APU") catch unreachable,
-            clap.parseParam("-r, --debug-ram        Debug RAM") catch unreachable,
-            clap.parseParam("-f, --frames <u32>     Exit after N frames") catch unreachable,
-            clap.parseParam("-p, --profile <u32>    Exit after N seconds") catch unreachable,
-            clap.parseParam("-t, --turbo            No sleep()") catch unreachable,
-            clap.parseParam("-v, --version          Show build info") catch unreachable,
-            clap.parseParam("<str>                  ROM filename") catch unreachable,
+        const params = comptime clap.parseParamsComptime(
+            \\-h, --help             Display this help and exit.
+            \\-H, --headless         Disable GUI.
+            \\-S, --silent           Disable Sound.
+            \\-c, --debug-cpu        Debug CPU.
+            \\-g, --debug-gpu        Debug GPU.
+            \\-a, --debug-apu        Debug APU.
+            \\-r, --debug-ram        Debug RAM.
+            \\-f, --frames <U32>     Exit after N frames.
+            \\-p, --profile <U32>    Exit after N seconds.
+            \\-t, --turbo            No sleep().
+            \\-v, --version          Show build info.
+            \\<STR>...               ROM filename.
+        );
+
+        // Declare our own parsers which are used to map the argument strings to other
+        // types.
+        const parsers = comptime .{
+            .STR = clap.parsers.string,
+            .FILE = clap.parsers.string,
+            .U32 = clap.parsers.int(u32, 10),
         };
 
         var diag = clap.Diagnostic{};
-        var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
+        var res = clap.parse(clap.Help, &params, parsers, .{
             .diagnostic = &diag,
             .allocator = ally,
         }) catch |err| {
@@ -65,8 +73,11 @@ pub const Args = struct {
             profile = n;
 
         var rom: []const u8 = "";
-        for (res.positionals) |pos|
+        for (res.positionals[0]) |pos|{
             rom = try ally.dupe(u8, pos);
+            // _ = &rom;
+            // std.debug.print("{s}\n", .{pos});
+        }
 
         return Args{
             .allocator = ally,

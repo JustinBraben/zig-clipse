@@ -8,7 +8,10 @@ pub fn build(b: *std.Build) void {
     const test_step = b.step("test", "Run all tests in all modes.");
     const tests = b.addTest(.{
         .root_source_file = b.path("tests/tests.zig"),
-        .test_runner = b.path("test_runner.zig"),
+        .test_runner = .{
+            .path = b.path("test_runner.zig"),
+            .mode = .simple,
+        },
         .target = target,
         .optimize = optimize,
     });
@@ -30,7 +33,7 @@ pub fn build(b: *std.Build) void {
         exe.linkSystemLibrary("SDL2");
         exe.linkLibC();
     } else {
-        const sdl_dep = b.dependency("SDL2", .{ .target = target, .optimize = optimize });
+        const sdl_dep = b.dependency("SDL", .{ .target = target, .optimize = optimize });
         exe.linkLibrary(sdl_dep.artifact("SDL2"));
     }
 
