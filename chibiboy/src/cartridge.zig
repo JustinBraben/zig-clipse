@@ -21,6 +21,12 @@ fn parse_ram_size(val: u8) u32 {
     };
 }
 
+pub const CartContext = struct {
+    file_name: []const u8,
+    rom_size: u32,
+    rom_data: []const u8,
+};
+
 pub const Cartridge = struct {
     allocator: std.mem.Allocator,
 
@@ -30,16 +36,16 @@ pub const Cartridge = struct {
     logo: []u8,
     name: []const u8,
     is_gbc: bool,
-    licensee: u16,
+    new_lic_code: u16,
     is_sgb: bool,
     cart_type: u8,
     rom_size: u32,
     ram_size: u32,
-    destination: u8,
-    old_licensee: u8,
-    rom_version: u8,
-    complement_check: u8,
-    checksum: u16,
+    dest_code: u8,
+    lic_code: u8,
+    version: u8,
+    checksum: u8,
+    global_checksum: u16,
 
     pub fn init(allocator: std.mem.Allocator, file_name: []const u8) !Cartridge {
         const input_file = try std.fs.cwd().openFile(file_name, .{}); 
@@ -59,16 +65,16 @@ pub const Cartridge = struct {
             .logo = file_contents[0x0104 .. 0x0104 + 48],
             .name = file_contents[0x0134 .. 0x0134 + 15],
             .is_gbc = file_contents[0x0143] == 0x80,
-            .licensee = @as(u16, @intCast(file_contents[0x0144])) << 8 | @as(u16, @intCast(file_contents[0x0145])),
+            .new_lic_code = @as(u16, @intCast(file_contents[0x0144])) << 8 | @as(u16, @intCast(file_contents[0x0145])),
             .is_sgb = file_contents[0x0146] == 0x03,
             .cart_type = file_contents[0x0147],
             .rom_size = parse_rom_size(file_contents[0x0148]),
             .ram_size = parse_ram_size(file_contents[0x0149]),
-            .destination = file_contents[0x014A],
-            .old_licensee = file_contents[0x014B],
-            .rom_version = file_contents[0x014C],
-            .complement_check = file_contents[0x014D],
-            .checksum = @as(u16, @intCast(file_contents[0x014E])) << 8 | @as(u16, @intCast(file_contents[0x14F])),
+            .dest_code = file_contents[0x014A],
+            .lic_code = file_contents[0x014B],
+            .version = file_contents[0x014C],
+            .checksum = file_contents[0x014D],
+            .global_checksum = @as(u16, @intCast(file_contents[0x014E])) << 8 | @as(u16, @intCast(file_contents[0x14F])),
         };
     }
 
