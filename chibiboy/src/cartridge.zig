@@ -55,7 +55,7 @@ pub const Cartridge = struct {
         const file_contents = try input_file.readToEndAlloc(allocator, file_stat.size);
         errdefer allocator.free(file_contents);
 
-        // Print file contents
+        // DEBUG: Print file contents
         // std.debug.print("{s}", .{file_contents});
 
         return Cartridge{
