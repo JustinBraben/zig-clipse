@@ -53,7 +53,7 @@ pub const GPU = struct {
     obp0: [4]SDL.SDL_Color,
     obp1: [4]SDL.SDL_Color,
 
-    pub fn new(cpu: *CPU, name: []const u8, headless: bool, debug: bool) !GPU {
+    pub fn init(cpu: *CPU, name: []const u8, headless: bool, debug: bool) !GPU {
         // Window
         var w: i32 = 160;
         var h: i32 = 144;

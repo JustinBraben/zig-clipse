@@ -7,13 +7,15 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run all tests in all modes.");
     const tests = b.addTest(.{
-        .root_source_file = b.path("tests/tests.zig"),
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("tests/tests.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
         .test_runner = .{
             .path = b.path("test_runner.zig"),
             .mode = .simple,
         },
-        .target = target,
-        .optimize = optimize,
     });
     tests.root_module.addImport("chibiboy", chibiboy_mod);
     const run_tests = b.addRunArtifact(tests);
@@ -21,9 +23,11 @@ pub fn build(b: *std.Build) void {
 
     const exe = b.addExecutable(.{
         .name = "chibiboy",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        })
     });
 
     const clap_dep = b.dependency("clap", .{ .target = target, .optimize = optimize });
@@ -37,8 +41,8 @@ pub fn build(b: *std.Build) void {
         const sdl_dep = b.dependency("SDL", .{ .target = target, .optimize = optimize });
         exe.linkLibrary(sdl_dep.artifact("SDL2"));
 
-        const sdl2_ttf_dep = b.dependency("SDL2_ttf", .{ .target = target, .optimize = optimize });
-        exe.linkLibrary(sdl2_ttf_dep.artifact("SDL2_ttf"));
+        const sdl_ttf_dep = b.dependency("SDL3_ttf", .{ .target = target, .optimize = optimize });
+        exe.linkLibrary(sdl_ttf_dep.artifact("SDL3_ttf"));
     }
 
     b.installArtifact(exe);

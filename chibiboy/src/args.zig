@@ -50,7 +50,7 @@ pub const Args = struct {
             .allocator = ally,
         }) catch |err| {
             // Report useful error and exit
-            diag.report(io.getStdErr().writer(), err) catch {};
+            try diag.reportToFile(std.fs.File.stderr(), err);
             return err;
         };
         defer res.deinit();
@@ -60,7 +60,13 @@ pub const Args = struct {
         }
         
         if (res.args.help != 0) {
-            try clap.help(std.io.getStdErr().writer(), clap.Help, &params, .{});
+            // try clap.help(std.io.getStdErr().writer(), clap.Help, &params, .{});
+            // return errors.ControlledExit.Help;
+
+            try clap.helpToFile(.stderr(), clap.Help, &params, .{
+                // .description_indent = 4,
+                .spacing_between_parameters = 0,
+            });
             return errors.ControlledExit.Help;
         }
 
