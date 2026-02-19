@@ -12,9 +12,12 @@ const DIM = "\x1b[2m";
 const RESET = "\x1b[0m";
 
 pub fn main() !void {
-    const stdout = std.io.getStdOut();
-    const config = tty.detectConfig(stdout);
-    const out = stdout.writer();
+    var stdout_buf: [1024]u8 = undefined;
+    var stdout_file = std.fs.File.stdout();
+    var stdout_writer = stdout_file.writer(&stdout_buf);
+    const out: *std.io.Writer = &stdout_writer.interface;
+
+    const config: tty.Config = .detect(stdout_file);
 
     for (builtin.test_functions) |t| {
         const start = std.time.milliTimestamp();
@@ -26,20 +29,22 @@ pub fn main() !void {
 
         if (result) |_| {
             try config.setColor(out, .green);
-            try std.fmt.format(out, "{s} passed - ({d}ms)\n", .{name, elapsed});
+            try out.print("{s} passed - ({d}ms)\n", .{name, elapsed});
             try config.setColor(out, .bright_yellow);
         } else |err| {
             try config.setColor(out, .red);
-            try std.fmt.format(out, "{s} failed - {}\n", .{name, err});
+            try out.print("{s} failed - {}\n", .{name, err});
             try config.setColor(out, .bright_yellow);
         }
 
         if (std.testing.allocator_instance.deinit() == .leak) {
             try config.setColor(out, .red);
-            try std.fmt.format(out, "{s} leaked memory\n", .{name});
+            try out.print("{s} leaked memory\n", .{name});
             try config.setColor(out, .bright_yellow);
         }
     }
+
+    try out.flush();
 }
 
 fn extractName(t: std.builtin.TestFn) []const u8 {

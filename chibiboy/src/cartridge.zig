@@ -48,7 +48,7 @@ pub const Cartridge = struct {
     global_checksum: u16,
 
     pub fn init(allocator: std.mem.Allocator, file_name: []const u8) !Cartridge {
-        const input_file = try std.fs.cwd().openFile(file_name, .{}); 
+        const input_file = try std.fs.openFileAbsolute(file_name, .{}); 
         defer input_file.close();
         const file_stat = try input_file.stat();
 
