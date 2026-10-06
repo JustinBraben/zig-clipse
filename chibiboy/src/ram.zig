@@ -125,7 +125,7 @@ pub const RAM = struct {
         const val = self.data[addr];
 
         if (self.debug) {
-            std.io.getStdOut().writer().print("ram[{X:0>4}] -> {X:0>2}\n", .{ addr, val }) catch return 0;
+            std.debug.print("ram[{X:0>4}] -> {X:0>2}\n", .{ addr, val });
         }
 
         return val;
@@ -134,7 +134,7 @@ pub const RAM = struct {
     /// Set the value at specified address of ram
     pub fn set(self: *RAM, addr: u16, val: u8) void {
         if (self.debug) {
-            std.io.getStdOut().writer().print("ram[{X:0>4}] <- {X:0>2}\n", .{ addr, val }) catch return;
+            std.debug.print("ram[{X:0>4}] <- {X:0>2}\n", .{ addr, val });
         }
 
         self.data[addr] = val;

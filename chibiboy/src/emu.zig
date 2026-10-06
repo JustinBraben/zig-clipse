@@ -22,8 +22,8 @@ pub const Emu = struct {
     ram: RAM,
     cpu: CPU,
 
-    pub fn init(allocator: std.mem.Allocator, args: Args) !Emu {
-        var cartridge = try Cartridge.init(allocator, args.rom);
+    pub fn init(allocator: std.mem.Allocator, io: std.Io, args: Args) !Emu {
+        var cartridge = try Cartridge.init(allocator, io, args.rom);
         var ram = RAM.init(&cartridge, args.debug_ram);
         const cpu = CPU.init(&ram, args.debug_cpu);
         return Emu{

@@ -33,17 +33,11 @@ pub fn build(b: *std.Build) void {
     const clap_dep = b.dependency("clap", .{ .target = target, .optimize = optimize });
     exe.root_module.addImport("clap", clap_dep.module("clap"));
 
-    if (target.query.isNativeOs() and target.result.os.tag == .linux) {
-        exe.root_module.linkSystemLibrary("SDL2", .{});
-        exe.root_module.linkSystemLibrary("SDL2_ttf", .{});
-        exe.root_module.link_libc = true;
-    } else {
-        const sdl_dep = b.dependency("SDL", .{ .target = target, .optimize = optimize });
-        exe.root_module.addImport("sdl3", sdl_dep.module("sdl3"));
+    const sdl_dep = b.dependency("SDL", .{ .target = target, .optimize = optimize });
+    exe.root_module.addImport("sdl3", sdl_dep.module("sdl3"));
 
-        const sdl_ttf_dep = b.dependency("SDL_ttf", .{ .target = target, .optimize = optimize });
-        exe.root_module.linkLibrary(sdl_ttf_dep.artifact("SDL3_ttf"));
-    }
+    const sdl_ttf_dep = b.dependency("SDL_ttf", .{ .target = target, .optimize = optimize });
+    exe.root_module.linkLibrary(sdl_ttf_dep.artifact("SDL3_ttf"));
 
     b.installArtifact(exe);
 

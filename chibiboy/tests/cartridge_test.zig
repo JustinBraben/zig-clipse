@@ -6,7 +6,7 @@ const Cartridge = Chibiboy.Cartridge;
 test "Cartridge logo" {
     const testing_allocator = std.testing.allocator;
 
-    const exe_dir = try std.fs.selfExeDirPathAlloc(testing_allocator);
+    const exe_dir = try std.process.executableDirPathAlloc(std.testing.io, testing_allocator);
     defer testing_allocator.free(exe_dir);
 
     const rom_path = try std.fs.path.join(testing_allocator, &.{
@@ -18,7 +18,7 @@ test "Cartridge logo" {
 
     // std.debug.print("rom_path: {s}\n", .{rom_path});
 
-    var cart = try Cartridge.init(testing_allocator, rom_path);
+    var cart = try Cartridge.init(testing_allocator, std.testing.io, rom_path);
     defer cart.deinit();
 
     const expected_logo = [_]u8{ 
@@ -33,7 +33,7 @@ test "Cartridge logo" {
 test "Cartridge name" {
     const testing_allocator = std.testing.allocator;
 
-    const exe_dir = try std.fs.selfExeDirPathAlloc(testing_allocator);
+    const exe_dir = try std.process.executableDirPathAlloc(std.testing.io, testing_allocator);
     defer testing_allocator.free(exe_dir);
 
     const rom_path = try std.fs.path.join(testing_allocator, &.{
@@ -43,7 +43,7 @@ test "Cartridge name" {
     });
     defer testing_allocator.free(rom_path);
 
-    var cart = try Cartridge.init(testing_allocator, rom_path);
+    var cart = try Cartridge.init(testing_allocator, std.testing.io, rom_path);
     defer cart.deinit();
     
     const expected_name = "CGB_SOUND";

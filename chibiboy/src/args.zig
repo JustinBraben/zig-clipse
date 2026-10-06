@@ -5,8 +5,6 @@ const builtin = @import("builtin");
 
 const errors = @import("errors.zig");
 
-const io = std.io;
-
 pub const Args = struct {
     allocator: Allocator,
     rom: []const u8,
@@ -20,7 +18,7 @@ pub const Args = struct {
     profile: u32,
     turbo: bool,
 
-    pub fn parse_args(ally: Allocator) !Args {
+    pub fn parse_args(ally: Allocator, io: std.Io, process_args: std.process.Args) !Args {
         const params = comptime clap.parseParamsComptime(
             \\-h, --help             Display this help and exit.
             \\-H, --headless         Disable GUI.
@@ -45,12 +43,12 @@ pub const Args = struct {
         };
 
         var diag = clap.Diagnostic{};
-        var res = clap.parse(clap.Help, &params, parsers, .{
+        var res = clap.parse(clap.Help, &params, parsers, process_args, .{
             .diagnostic = &diag,
             .allocator = ally,
         }) catch |err| {
             // Report useful error and exit
-            try diag.reportToFile(std.fs.File.stderr(), err);
+            try diag.reportToFile(io, .stderr(), err);
             return err;
         };
         defer res.deinit();
@@ -63,7 +61,7 @@ pub const Args = struct {
             // try clap.help(std.io.getStdErr().writer(), clap.Help, &params, .{});
             // return errors.ControlledExit.Help;
 
-            try clap.helpToFile(.stderr(), clap.Help, &params, .{
+            try clap.helpToFile(io, .stderr(), clap.Help, &params, .{
                 // .description_indent = 4,
                 .spacing_between_parameters = 0,
             });

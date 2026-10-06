@@ -1,6 +1,5 @@
 const std = @import("std");
 const testing = std.testing;
-const fs = std.fs;
 
 const errors = @import("errors.zig");
 
@@ -47,12 +46,8 @@ pub const Cartridge = struct {
     checksum: u8,
     global_checksum: u16,
 
-    pub fn init(allocator: std.mem.Allocator, file_name: []const u8) !Cartridge {
-        const input_file = try std.fs.openFileAbsolute(file_name, .{}); 
-        defer input_file.close();
-        const file_stat = try input_file.stat();
-
-        const file_contents = try input_file.readToEndAlloc(allocator, file_stat.size);
+    pub fn init(allocator: std.mem.Allocator, io: std.Io, file_name: []const u8) !Cartridge {
+        const file_contents = try std.Io.Dir.cwd().readFileAlloc(io, file_name, allocator, .unlimited);
         errdefer allocator.free(file_contents);
 
         // DEBUG: Print file contents
@@ -86,7 +81,7 @@ pub const Cartridge = struct {
 
 test "Cartridge logo" {
     const testing_allocator = std.testing.allocator;
-    var cart = try Cartridge.init(testing_allocator, "roms/cgb_sound/cgb_sound.gb");
+    var cart = try Cartridge.init(testing_allocator, std.testing.io, "roms/cgb_sound/cgb_sound.gb");
     defer cart.deinit();
 
     const expected_logo = [_]u8{ 
@@ -100,7 +95,7 @@ test "Cartridge logo" {
 
 test "Cartridge name" {
     const testing_allocator = std.testing.allocator;
-    var cart = try Cartridge.init(testing_allocator, "roms/cgb_sound/cgb_sound.gb");
+    var cart = try Cartridge.init(testing_allocator, std.testing.io, "roms/cgb_sound/cgb_sound.gb");
     defer cart.deinit();
     
     const expected_name = "CGB_SOUND";

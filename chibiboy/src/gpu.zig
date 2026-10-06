@@ -66,45 +66,40 @@ pub const GPU = struct {
         var hw_buffer: ?*SDL.SDL_Texture = null;
         var hw_renderer: ?*SDL.SDL_Renderer = null;
         if (!headless) {
-            if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO) != 0) {
+            if (!SDL.SDL_Init(SDL.SDL_INIT_VIDEO)) {
                 SDL.SDL_Log("Unable to initialize SDL: %s", SDL.SDL_GetError());
                 return error.SDLInitializationFailed;
             }
             hw_window = SDL.SDL_CreateWindow(
                 "RosettaBoy - ??",
-                SDL.SDL_WINDOWPOS_CENTERED,
-                SDL.SDL_WINDOWPOS_CENTERED,
-                @intCast(w * SCALE),
-                @intCast(h * SCALE),
-                SDL.SDL_WINDOW_SHOWN | SDL.SDL_WINDOW_RESIZABLE | SDL.SDL_WINDOW_ALLOW_HIGHDPI,
-                // .{ .vis = .shown, .resizable = true, .allow_high_dpi = true },
+                w * SCALE,
+                h * SCALE,
+                SDL.SDL_WINDOW_RESIZABLE | SDL.SDL_WINDOW_HIGH_PIXEL_DENSITY,
             ) orelse {
+                SDL.SDL_Log("Unable to create window: %s", SDL.SDL_GetError());
+                return error.SDLInitializationFailed;
+            };
+            hw_renderer = SDL.SDL_CreateRenderer(hw_window, null) orelse {
                 SDL.SDL_Log("Unable to create renderer: %s", SDL.SDL_GetError());
                 return error.SDLInitializationFailed;
             };
-            hw_renderer = SDL.SDL_CreateRenderer(hw_window, 0, SDL.SDL_RENDERER_ACCELERATED);
-            // FIXME
-            // SDL.setHint(SDL.HINT_RENDER_SCALE_QUALITY, "nearest"); // vs "linear"
-            if (SDL.SDL_RenderSetLogicalSize(hw_renderer, w, h) != 0) {
-                SDL.SDL_Log("Unable to RenderSetLogicalSize: %s", SDL.SDL_GetError());
+            if (!SDL.SDL_SetRenderLogicalPresentation(hw_renderer, w, h, SDL.SDL_LOGICAL_PRESENTATION_LETTERBOX)) {
+                SDL.SDL_Log("Unable to SetRenderLogicalPresentation: %s", SDL.SDL_GetError());
                 return error.SDLRenderSetLogicalSizeFailed;
             }
             hw_buffer = SDL.SDL_CreateTexture(
                 hw_renderer, 
                 SDL.SDL_PIXELFORMAT_ABGR8888, 
                 SDL.SDL_TEXTUREACCESS_STREAMING, 
-                @intCast(w), 
-                @intCast(h)
-            );
+                w, 
+                h
+            ) orelse {
+                SDL.SDL_Log("Unable to create texture: %s", SDL.SDL_GetError());
+                return error.SDLInitializationFailed;
+            };
+            _ = SDL.SDL_SetTextureScaleMode(hw_buffer, SDL.SDL_SCALEMODE_NEAREST);
         }
-        // const buffer = try SDL.SDL_CreateRgbSurfaceWithFormat(@as(u31, @intCast(w)), @as(u31, @intCast(h)), SDL.SDL_PIXELFORMAT_ABGR8888);
-        const buffer = SDL.SDL_CreateRGBSurfaceWithFormat(
-            SDL.SDL_PIXELFORMAT_ABGR8888, 
-            w, 
-            h, 
-            32, 
-            SDL.SDL_PIXELFORMAT_ABGR8888
-        );
+        const buffer = SDL.SDL_CreateSurface(w, h, SDL.SDL_PIXELFORMAT_ABGR8888);
         const sw_renderer = SDL.SDL_CreateSoftwareRenderer(buffer);
 
         // Colors
@@ -135,8 +130,11 @@ pub const GPU = struct {
 
     pub fn deinit(self: *GPU) void {
         SDL.SDL_DestroyRenderer(self.sw_renderer);
+        SDL.SDL_DestroySurface(self.buffer);
+        SDL.SDL_DestroyTexture(self.hw_buffer);
         SDL.SDL_DestroyRenderer(self.hw_renderer);
         SDL.SDL_DestroyWindow(self.hw_window);
+        SDL.SDL_Quit();
     }
 
     pub fn tick(self: *GPU) !void {
@@ -200,13 +198,13 @@ pub const GPU = struct {
                     if (self.hw_buffer) |hw_buffer| {
                         if (self.buffer) |buffer| {
                             if (buffer.*.pixels) |pixels| {
-                                if (SDL.SDL_UpdateTexture(hw_buffer, null, pixels, @intCast(buffer.*.pitch)) != 0) {
+                                if (!SDL.SDL_UpdateTexture(hw_buffer, null, pixels, buffer.*.pitch)) {
                                     SDL.SDL_Log("Unable to UpdateTexture: %s", SDL.SDL_GetError());
                                     return error.SDLUpdateTextureFailed;
                                 }
                             }
                         }
-                        _ = SDL.SDL_RenderCopy(hw_renderer, hw_buffer, null, null);
+                        _ = SDL.SDL_RenderTexture(hw_renderer, hw_buffer, null, null);
                         _ = SDL.SDL_RenderPresent(hw_renderer);
                     }
                 }
@@ -263,22 +261,22 @@ pub const GPU = struct {
 
         // Background scroll border
         if (lcdc & LCDC.BG_WIN_ENABLED != 0) {
-            var rect = SDL.SDL_Rect{ .x = 0, .y = 0, .w = 160, .h = 144 };
+            const rect = SDL.SDL_Rect{ .x = 0, .y = 0, .w = 160, .h = 144 };
             // try self.renderer.setColorRGB(255, 0, 0);
             // try self.renderer.drawRect(rect);
             _ = SDL.SDL_SetRenderDrawColor(self.sw_renderer, 255, 0, 0, 255);
-            _ = SDL.SDL_RenderDrawRect(self.sw_renderer, &rect);
+            drawRect(self.sw_renderer, rect);
         }
 
         // Window tiles
         if (lcdc & LCDC.WINDOW_ENABLED != 0) {
             const wnd_y = self.cpu.ram.get(consts.Mem.WY);
             const wnd_x = self.cpu.ram.get(consts.Mem.WX);
-            var rect = SDL.SDL_Rect{ .x = wnd_x - 7, .y = wnd_y, .w = 160, .h = 144 };
+            const rect = SDL.SDL_Rect{ .x = wnd_x - 7, .y = wnd_y, .w = 160, .h = 144 };
             // try self.renderer.setColorRGB(0, 0, 255);
             // try self.renderer.drawRect(rect);
             _ = SDL.SDL_SetRenderDrawColor(self.sw_renderer, 0, 0, 255, 255);
-            _ = SDL.SDL_RenderDrawRect(self.sw_renderer, &rect);
+            drawRect(self.sw_renderer, rect);
         }
     }
 
@@ -295,7 +293,7 @@ pub const GPU = struct {
             if (self.debug) {
                 const xy = SDL.SDL_Point{ .x = 256 - @as(i16, @intCast(scroll_x)), .y = @as(c_int, @intCast(ly)) };
                 _ = SDL.SDL_SetRenderDrawColor(self.sw_renderer, 255, 0, 0, 255);
-                _ = SDL.SDL_RenderDrawPoint(self.sw_renderer, xy.x, xy.y);
+                _ = SDL.SDL_RenderPoint(self.sw_renderer, @floatFromInt(xy.x), @floatFromInt(xy.y));
                 // try self.renderer.setColorRGB(255, 0, 0);
                 // try self.renderer.drawPoint(xy.x, xy.y);
             }
@@ -332,14 +330,14 @@ pub const GPU = struct {
             const tile_map = if (lcdc & LCDC.WINDOW_MAP != 0) consts.Mem.Map1 else consts.Mem.Map0;
 
             // blank out the background
-            var rect = SDL.SDL_Rect{
+            const rect = SDL.SDL_Rect{
                 .x = wnd_x - 7,
                 .y = wnd_y,
                 .w = 160,
                 .h = 144,
             };
             _ = SDL.SDL_SetRenderDrawColor(self.sw_renderer, self.bgp[0].r, self.bgp[0].g, self.bgp[0].b, self.bgp[0].a);
-            _ = SDL.SDL_RenderDrawRect(self.sw_renderer, &rect);
+            drawRect(self.sw_renderer, rect);
             // try self.renderer.setColor(self.bgp[0]);
             // try self.renderer.fillRect(rect);
 
@@ -408,7 +406,7 @@ pub const GPU = struct {
         }
 
         if (self.debug) {
-            var rect = SDL.SDL_Rect{
+            const rect = SDL.SDL_Rect{
                 .x = offset.x,
                 .y = offset.y,
                 .w = 8,
@@ -416,7 +414,7 @@ pub const GPU = struct {
             };
             const hue = gen_hue(@as(u8, @intCast(tile_id & 0xFF)));
             _ = SDL.SDL_SetRenderDrawColor(self.sw_renderer, hue.r, hue.g, hue.b, hue.a);
-            _ = SDL.SDL_RenderDrawRect(self.sw_renderer, &rect);
+            drawRect(self.sw_renderer, rect);
             // try self.renderer.setColor(gen_hue(@as(u8, @intCast(tile_id & 0xFF))));
             // try self.renderer.drawRect(rect);
         }
@@ -446,7 +444,7 @@ pub const GPU = struct {
                     .y = offset.y + (if (flip_y) 7 - y else y),
                 };
                 _ = SDL.SDL_SetRenderDrawColor(self.sw_renderer, palette[px].r, palette[px].g, palette[px].b, palette[px].a);
-                _ = SDL.SDL_RenderDrawPoint(self.sw_renderer, xy.x, xy.y);
+                _ = SDL.SDL_RenderPoint(self.sw_renderer, @floatFromInt(xy.x), @floatFromInt(xy.y));
                 // try self.renderer.setColor(palette[px]);
                 // try self.renderer.drawPoint(xy.x, xy.y);
             }
@@ -490,4 +488,15 @@ pub fn gen_hue(n: u8) SDL.SDL_Color {
         4 => SDL.SDL_Color{ .r = t, .g = 0, .b = 255, .a = 0xFF },
         else => SDL.SDL_Color{ .r = 255, .g = 0, .b = q, .a = 0xFF },
     };
+}
+
+/// SDL3 draws in float coordinates; convert the integer rect and outline it.
+fn drawRect(renderer: ?*SDL.SDL_Renderer, rect: SDL.SDL_Rect) void {
+    const frect = SDL.SDL_FRect{
+        .x = @floatFromInt(rect.x),
+        .y = @floatFromInt(rect.y),
+        .w = @floatFromInt(rect.w),
+        .h = @floatFromInt(rect.h),
+    };
+    _ = SDL.SDL_RenderRect(renderer, &frect);
 }
