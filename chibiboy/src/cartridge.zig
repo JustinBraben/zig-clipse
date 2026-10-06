@@ -46,6 +46,12 @@ pub const Cartridge = struct {
     checksum: u8,
     global_checksum: u16,
 
+    // MBC1 banking state
+    rom_bank: u5 = 1,
+    bank_hi: u2 = 0,
+    ram_enable: bool = false,
+    mode: u1 = 0,
+
     pub fn init(allocator: std.mem.Allocator, io: std.Io, file_name: []const u8) !Cartridge {
         const file_contents = try std.Io.Dir.cwd().readFileAlloc(io, file_name, allocator, .unlimited);
         errdefer allocator.free(file_contents);
@@ -76,6 +82,63 @@ pub const Cartridge = struct {
     pub fn deinit(self: *Cartridge) void {
         self.allocator.free(self.data);
         self.allocator.free(self.ram);
+    }
+
+    fn isMbc1(self: *const Cartridge) bool {
+        return self.cart_type >= 0x01 and self.cart_type <= 0x03;
+    }
+
+    /// Read from cartridge ROM (0x0000-0x7FFF), applying MBC1 banking.
+    pub fn readRom(self: *const Cartridge, addr: u16) u8 {
+        var bank: usize = 0;
+        if (self.isMbc1()) {
+            if (addr < 0x4000) {
+                if (self.mode == 1) bank = @as(usize, self.bank_hi) << 5;
+            } else {
+                bank = (@as(usize, self.bank_hi) << 5) | self.rom_bank;
+            }
+        } else if (addr >= 0x4000) {
+            bank = 1;
+        }
+
+        const bank_count = @max(self.data.len / 0x4000, 1);
+        bank %= bank_count;
+        const offset = bank * 0x4000 + (addr & 0x3FFF);
+        return if (offset < self.data.len) self.data[offset] else 0xFF;
+    }
+
+    /// Writes to the ROM area (0x0000-0x7FFF) set MBC registers; ROM itself is never modified.
+    pub fn writeControl(self: *Cartridge, addr: u16, val: u8) void {
+        if (!self.isMbc1()) return;
+        switch (addr) {
+            0x0000...0x1FFF => self.ram_enable = (val & 0x0F) == 0x0A,
+            0x2000...0x3FFF => {
+                const bank: u5 = @truncate(val);
+                self.rom_bank = if (bank == 0) 1 else bank;
+            },
+            0x4000...0x5FFF => self.bank_hi = @truncate(val),
+            0x6000...0x7FFF => self.mode = @truncate(val),
+            else => {},
+        }
+    }
+
+    fn ramOffset(self: *const Cartridge, addr: u16) ?usize {
+        if (!self.ram_enable or self.ram.len == 0) return null;
+        const bank: usize = if (self.mode == 1) self.bank_hi else 0;
+        const offset = bank * 0x2000 + (addr - 0xA000);
+        return if (offset < self.ram.len) offset else null;
+    }
+
+    /// Read from external cartridge RAM (0xA000-0xBFFF).
+    pub fn readRam(self: *const Cartridge, addr: u16) u8 {
+        const offset = self.ramOffset(addr) orelse return 0xFF;
+        return self.ram[offset];
+    }
+
+    /// Write to external cartridge RAM (0xA000-0xBFFF).
+    pub fn writeRam(self: *Cartridge, addr: u16, val: u8) void {
+        const offset = self.ramOffset(addr) orelse return;
+        self.ram[offset] = val;
     }
 };
 

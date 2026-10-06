@@ -1,4 +1,8 @@
 pub const Args = @import("args.zig").Args;
 pub const errors = @import("errors.zig");
 pub const Emu = @import("emu.zig").Emu;
+pub const Options = @import("emu.zig").Options;
+pub const TestResult = @import("emu.zig").TestResult;
 pub const Cartridge = @import("cartridge.zig").Cartridge;
+pub const CPU = @import("cpu.zig").CPU;
+pub const RAM = @import("ram.zig").RAM;

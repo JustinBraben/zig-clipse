@@ -2,6 +2,7 @@ const std = @import("std");
 const print = @import("std").debug.print;
 
 const Cart = @import("cartridge.zig").Cartridge;
+const consts = @import("consts.zig");
 
 /// Sequence to start the gameboy
 const BOOT = [0x100]u8{
@@ -111,18 +112,36 @@ pub const RAM = struct {
     boot: [0x100]u8,
     data: [0xFFFF + 1]u8,
 
-    pub fn init(cart: *Cart, debug_ram: bool) RAM {
+    allocator: std.mem.Allocator,
+    /// Every byte the game has sent over the link port (SB/SC).
+    serial: std.ArrayList(u8) = .empty,
+
+    pub fn init(allocator: std.mem.Allocator, cart: *Cart, debug_ram: bool) RAM {
         return .{
             .debug = debug_ram,
             .cart = cart,
             .boot = BOOT,
             .data = [_]u8{0} ** 0x10000,
+            .allocator = allocator,
         };
+    }
+
+    pub fn deinit(self: *RAM) void {
+        self.serial.deinit(self.allocator);
     }
 
     /// Get the value at specified address of ram
     pub fn get(self: *RAM, addr: u16) u8 {
-        const val = self.data[addr];
+        const val = switch (addr) {
+            0x0000...0x00FF => if (self.data[consts.Mem.BOOT] == 0) self.boot[addr] else self.cart.readRom(addr),
+            0x0100...0x7FFF => self.cart.readRom(addr),
+            0xA000...0xBFFF => self.cart.readRam(addr),
+            // Echo RAM mirrors 0xC000-0xDDFF
+            0xE000...0xFDFF => self.data[addr - 0x2000],
+            // Unusable area
+            0xFEA0...0xFEFF => 0xFF,
+            else => self.data[addr],
+        };
 
         if (self.debug) {
             std.debug.print("ram[{X:0>4}] -> {X:0>2}\n", .{ addr, val });
@@ -137,6 +156,24 @@ pub const RAM = struct {
             std.debug.print("ram[{X:0>4}] <- {X:0>2}\n", .{ addr, val });
         }
 
-        self.data[addr] = val;
+        switch (addr) {
+            0x0000...0x7FFF => self.cart.writeControl(addr, val),
+            0xA000...0xBFFF => self.cart.writeRam(addr, val),
+            0xE000...0xFDFF => self.data[addr - 0x2000] = val,
+            0xFEA0...0xFEFF => {},
+            // Any write to DIV resets it
+            consts.Mem.DIV => self.data[addr] = 0,
+            consts.Mem.SC => {
+                self.data[addr] = val;
+                // Transfer requested with internal clock: complete it instantly
+                if (val == 0x81) {
+                    self.serial.append(self.allocator, self.data[consts.Mem.SB]) catch {};
+                    self.data[consts.Mem.SB] = 0xFF;
+                    self.data[consts.Mem.SC] = 0x01;
+                    self.data[consts.Mem.IF] |= consts.Interrupt.SERIAL;
+                }
+            },
+            else => self.data[addr] = val,
+        }
     }
 };

@@ -7,6 +7,7 @@ pub const ControlledExit = error{
 };
 pub const GameException = error{
     InvalidOpcode,
+    UnimplementedOpcode,
     InvalidRamRead,
     InvalidRamWrite,
 };

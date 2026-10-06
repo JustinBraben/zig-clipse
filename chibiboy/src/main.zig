@@ -18,10 +18,13 @@ pub fn main(init: std.process.Init) !void {
 
     print("args.rom: {s}\n", .{args.rom});
 
-    var emu = try Emu.init(gpa, io, args);
-    defer emu.deinit();
+    const emu = try Emu.create(gpa, io, args.rom, .{
+        .debug_cpu = args.debug_cpu,
+        .debug_ram = args.debug_ram,
+    });
+    defer emu.destroy();
 
     print("emu.cartridge.name: {s} , len: {d}\n", .{emu.cartridge.name, emu.cartridge.name.len});
 
-    try emu.run();
+    try emu.run(.{ .frames = args.frames, .profile = args.profile });
 }

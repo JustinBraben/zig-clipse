@@ -18,6 +18,10 @@ pub fn build(b: *std.Build) void {
         },
     });
     tests.root_module.addImport("chibiboy", chibiboy_mod);
+
+    const test_options = b.addOptions();
+    test_options.addOption([]const u8, "roms_dir", b.pathFromRoot("tests/gb-test-roms-master"));
+    tests.root_module.addOptions("build_options", test_options);
     const run_tests = b.addRunArtifact(tests);
     test_step.dependOn(&run_tests.step);
 
