@@ -39,9 +39,9 @@ pub fn build(b: *std.Build) void {
         exe.root_module.link_libc = true;
     } else {
         const sdl_dep = b.dependency("SDL", .{ .target = target, .optimize = optimize });
-        exe.root_module.linkLibrary(sdl_dep.artifact("SDL2"));
+        exe.root_module.addImport("sdl3", sdl_dep.module("sdl3"));
 
-        const sdl_ttf_dep = b.dependency("SDL3_ttf", .{ .target = target, .optimize = optimize });
+        const sdl_ttf_dep = b.dependency("SDL_ttf", .{ .target = target, .optimize = optimize });
         exe.root_module.linkLibrary(sdl_ttf_dep.artifact("SDL3_ttf"));
     }
 

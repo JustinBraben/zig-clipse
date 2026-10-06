@@ -12,17 +12,18 @@ const c = @import("clibs.zig");
 
 const print = std.debug.print;
 
-pub fn main() !void {
-    var gpa_impl = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa_impl.deinit();
-    const gpa = gpa_impl.allocator();
+pub fn main(init: std.process.Init) !void {
+    var iter = try init.minimal.args.iterateAllocator(init.gpa);
+    defer iter.deinit();
 
-    var args = try Args.parse_args(gpa);
+    _ = iter.next();
+
+    var args = try Args.parse_args(init.gpa);
     defer args.deinit();
 
     print("args.rom: {s}\n", .{args.rom});
 
-    var emu = try Emu.init(gpa, args);
+    var emu = try Emu.init(init.gpa, args);
     defer emu.deinit();
 
     print("emu.cartridge.name: {s} , len: {d}\n", .{emu.cartridge.name, emu.cartridge.name.len});
