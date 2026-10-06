@@ -1,6 +1,7 @@
 .{
     .name = .chibiboy,
     .version = "0.0.1",
+    .minimum_zig_version = "0.16.0",
     .fingerprint = 0x89d7193bca865568,
     .paths = .{
         "src",
@@ -10,20 +11,16 @@
     },
     .dependencies = .{
         .SDL = .{
-            .url = "git+https://github.com/allyourcodebase/SDL#b4c5cd25203255cf705f63fb8a725dcb54655f3e",
-            .hash = "SDL-2.32.10-JToi3yC3EgF2Z9jT2Zfq0y0xzmb0QxnaIfFDn0qPrzxB",
+            .url = "git+https://github.com/allyourcodebase/SDL#c96b7ae3985139cbe1298dd405ae1d145640ab05",
+            .hash = "sdl-1.0.3+3.4.16-i4QD0VwGqgDmmhfOmpwPL3MnU2bKAwYkLxFO3NvpBw4w",
         },
         .clap = .{
-            .url = "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.11.0.tar.gz",
-            .hash = "clap-0.11.0-oBajB-HnAQDPCKYzwF7rO3qDFwRcD39Q0DALlTSz5H7e",
+            .url = "https://github.com/Hejsil/zig-clap/archive/refs/tags/0.12.0.tar.gz",
+            .hash = "clap-0.12.0-oBajB7foAQDqlSwaSG5g0yq7xGbQARUsBk5T64gAOqP5",
         },
         .SDL_ttf = .{
-            .url = "git+https://github.com/allyourcodebase/SDL_ttf#00bf02e44d486787034ccdc3eced6e455b125f56",
-            .hash = "SDL_ttf-3.2.2-PNW5xNIRAADcUkA75pWizqojQE4hM75QjOequyw4aET6",
-        },
-        .SDL3_ttf = .{
-            .url = "git+https://github.com/allyourcodebase/SDL_ttf#00bf02e44d486787034ccdc3eced6e455b125f56",
-            .hash = "SDL_ttf-3.2.2-PNW5xNIRAADcUkA75pWizqojQE4hM75QjOequyw4aET6",
+            .url = "git+https://github.com/allyourcodebase/SDL_ttf#f73c95d1c0d6ebc8981a11eeed4df8a2227d98f2",
+            .hash = "SDL_ttf-3.2.3-2-PNW5xEgRAABd84H4ftBSHN5YevtLI4sHoSU92fxFQbwC",
         },
     },
 }

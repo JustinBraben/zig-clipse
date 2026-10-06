@@ -1,0 +1,12 @@
+#!/bin/bash
+f="$1"
+shift
+if [[ -e $f ]]
+then
+   rm "$f"
+fi
+
+for var in "$@"
+do
+    echo \"$var\" >> "$f"
+done
