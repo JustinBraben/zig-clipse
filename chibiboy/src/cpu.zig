@@ -446,7 +446,26 @@ pub const CPU = struct {
                 self.registers.flags.c = !self.registers.flags.c;
             },
             // TODO(you): DAA -- decimal-adjust A after a BCD add/sub. Tested by 01-special.
-            0x27 => return self.unimplemented(op),
+            0x27 => {
+                const byte = self.fetch8();
+                // const a = self.registers.R8.A;
+                if (self.registers.flags.n == false) {
+                    if (self.registers.flags.h or (byte & 0x0F) > 9) {
+                        self.registers.R8.A +%= 0x06;
+                        self.registers.flags.c = (self.registers.R8.A > 0x99);
+                    }
+                }
+
+                if (self.registers.flags.n == true) {
+                    if (self.registers.flags.h or self.registers.flags.c) {
+                        self.registers.R8.A -%= 0x06;
+                    }
+                }
+
+                self.registers.flags.z = (self.registers.R8.A == 0);
+
+                self.registers.flags.h = false;
+            },
 
             // ---- 16-bit arithmetic ----
             0x03, 0x13, 0x23, 0x33 => self.setR16(p, self.getR16(p) +% 1), // INC rr
@@ -496,7 +515,10 @@ pub const CPU = struct {
             },
             0xC7, 0xCF, 0xD7, 0xDF, 0xE7, 0xEF, 0xF7, 0xFF => self.call(op & 0x38), // RST
             // TODO(you): RETI -- RET, and enable IME immediately. Tested by 02-interrupts.
-            0xD9 => return self.unimplemented(op),
+            0xD9 => {
+                self.PC = self.pop();
+                self.ime = true;
+            },
 
             // ---- interrupts / misc ----
             0xF3 => { // DI
@@ -505,10 +527,14 @@ pub const CPU = struct {
             },
             // TODO(you): EI -- set `ime_pending`; `step` turns IME on after the next
             // instruction. Tested by 02-interrupts.
-            0xFB => return self.unimplemented(op),
+            0xFB => {
+                self.ime_pending = true;
+            },
             // TODO(you): HALT -- set `halted`; `step` wakes the CPU when IE & IF != 0.
             // Tested by 02-interrupts.
-            0x76 => return self.unimplemented(op),
+            0x76 => {
+                self.halted = true;
+            },
 
             0xCB => return self.cb(),
 
