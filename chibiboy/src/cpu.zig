@@ -72,6 +72,7 @@ pub const CPU = struct {
     ime_pending: bool = false,
     /// Set by HALT: the CPU idles until an enabled interrupt is requested.
     halted: bool = false,
+    halt_bug: bool = false,
     /// Set by STOP (read by the GPU). Not used by the CPU yet.
     stop: bool = false,
 
@@ -99,6 +100,13 @@ pub const CPU = struct {
 
     /// Run one instruction (or service one interrupt). Returns the T-cycles it took.
     pub fn step(self: *CPU) errors.GameException!u8 {
+        if (self.halt_bug) {
+            const op = self.fetch8();
+            const cycles = try self.execute(op);
+            self.PC -%= 1;
+            self.halt_bug = false;
+            return cycles;
+        }
         const pending = self.ram.data[consts.Mem.IE] & self.ram.data[consts.Mem.IF] & 0x1F;
         if (pending != 0) {
             self.halted = false;
@@ -552,7 +560,15 @@ pub const CPU = struct {
             // TODO(you): HALT -- set `halted`; `step` wakes the CPU when IE & IF != 0.
             // Tested by 02-interrupts.
             0x76 => {
-                self.halted = true;
+                if (!self.ime and (self.ram.data[consts.Mem.IE] & self.ram.data[consts.Mem.IF]) != 0) {
+                    self.halt_bug = true;
+                }
+                else if (!self.ime and (self.ram.data[consts.Mem.IE] & self.ram.data[consts.Mem.IF]) == 0) {
+                    self.halted = true;
+                }
+                else {
+                    self.halted = true;
+                }
             },
 
             0xCB => return self.cb(),

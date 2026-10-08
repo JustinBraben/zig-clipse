@@ -24,12 +24,39 @@ pub const Timer = struct {
     tima_counter: u16 = 0,
 
     pub fn init(cpu: *CPU) Timer {
-        return .{ .cpu = cpu };
+        return .{ 
+            .cpu = cpu,
+        };
     }
 
     pub fn tick(self: *Timer, cycles: u8) void {
-        // TODO(you): advance DIV and TIMA as described above.
-        _ = self;
-        _ = cycles;
+
+        // add cycles to div_counter every tick
+        self.div_counter += cycles;
+        
+        // every 256, increment byte at DIV and decrease div_counter by 256
+        while (self.div_counter >= 256) {
+            self.cpu.ram.data[consts.Mem.DIV] = (self.cpu.ram.data[consts.Mem.DIV] +% 1);
+            self.div_counter -= 256;
+        }
+
+        // Only add to tima_counter when bit 2 is set of TAC
+        if (self.cpu.ram.data[consts.Mem.TAC] & 1 << 2 == 1 << 2) {
+            self.tima_counter += cycles;
+        }
+
+        const speeds = [_]u16{ 1024, 16, 64, 256 }; // increment per X cycles
+        const speed = speeds[(self.cpu.ram.data[consts.Mem.TAC] & 0x03)];
+        while (self.tima_counter >= speed) {
+            if (self.cpu.ram.data[consts.Mem.TIMA] == 0xFF) {
+                self.cpu.ram.data[consts.Mem.TIMA] = self.cpu.ram.data[consts.Mem.TMA]; // if timer overflows, load base
+                self.cpu.interrupt(consts.Interrupt.TIMER);
+            } 
+            else 
+            {
+                self.cpu.ram.data[consts.Mem.TIMA] = self.cpu.ram.data[consts.Mem.TIMA] +% 1;
+            }
+            self.tima_counter -= speed;
+        }
     }
 };
