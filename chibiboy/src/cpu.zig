@@ -31,6 +31,7 @@ pub const CPU = struct {
     debug: bool,
     registers: packed union {
         R16: packed struct {
+            /// Accumulator & Flags
             AF: u16,
             BC: u16,
             DE: u16,
@@ -48,14 +49,20 @@ pub const CPU = struct {
         },
         flags: packed struct {
             _p1: u4,
+            /// Carry
             c: bool,
+            /// Half carry
             h: bool,
+            /// Subtraction
             n: bool,
+            /// Zero
             z: bool,
             _p2: u56,
         },
     },
+    /// Stack Pointer
     SP: u16,
+    /// Program Counter/Pointer
     PC: u16,
     ram: *RAM,
 
@@ -447,19 +454,31 @@ pub const CPU = struct {
             },
             // TODO(you): DAA -- decimal-adjust A after a BCD add/sub. Tested by 01-special.
             0x27 => {
-                const byte = self.fetch8();
-                // const a = self.registers.R8.A;
-                if (self.registers.flags.n == false) {
-                    if (self.registers.flags.h or (byte & 0x0F) > 9) {
-                        self.registers.R8.A +%= 0x06;
-                        self.registers.flags.c = (self.registers.R8.A > 0x99);
-                    }
-                }
+                const a = self.registers.R8.A;
+                var adjustment: u8 = 0;
 
-                if (self.registers.flags.n == true) {
-                    if (self.registers.flags.h or self.registers.flags.c) {
-                        self.registers.R8.A -%= 0x06;
+                // subtract flag is set
+                if (self.registers.flags.n) {
+                    // half carry flag set
+                    if (self.registers.flags.h) {
+                        adjustment +%= 0x06;
                     }
+                    if (self.registers.flags.c) {
+                        adjustment +%= 0x60;
+                    }
+                    self.registers.R8.A -%= adjustment;
+                }
+                // subtract flag not set
+                else 
+                {
+                    if (self.registers.flags.h or (a & 0x0F) > 9) {
+                        adjustment +%= 0x06;
+                    }
+                    if (self.registers.flags.c or (a > 0x99)) {
+                        adjustment +%= 0x60;
+                        self.registers.flags.c = true;
+                    }
+                    self.registers.R8.A +%= adjustment;
                 }
 
                 self.registers.flags.z = (self.registers.R8.A == 0);

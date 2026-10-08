@@ -121,7 +121,7 @@ pub const RAM = struct {
             .debug = debug_ram,
             .cart = cart,
             .boot = BOOT,
-            .data = [_]u8{0} ** 0x10000,
+            .data = @splat(0),
             .allocator = allocator,
         };
     }
