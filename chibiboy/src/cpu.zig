@@ -100,13 +100,6 @@ pub const CPU = struct {
 
     /// Run one instruction (or service one interrupt). Returns the T-cycles it took.
     pub fn step(self: *CPU) errors.GameException!u8 {
-        if (self.halt_bug) {
-            const op = self.fetch8();
-            const cycles = try self.execute(op);
-            self.PC -%= 1;
-            self.halt_bug = false;
-            return cycles;
-        }
         const pending = self.ram.data[consts.Mem.IE] & self.ram.data[consts.Mem.IF] & 0x1F;
         if (pending != 0) {
             self.halted = false;
@@ -118,6 +111,10 @@ pub const CPU = struct {
         if (self.debug) self.trace();
 
         const op = self.fetch8();
+        if (self.halt_bug) { 
+            self.PC -%= 1;
+            self.halt_bug = false;
+        }
         const cycles = try self.execute(op);
 
         // EI takes effect after the next instruction, unless that instruction was DI.
@@ -560,11 +557,9 @@ pub const CPU = struct {
             // TODO(you): HALT -- set `halted`; `step` wakes the CPU when IE & IF != 0.
             // Tested by 02-interrupts.
             0x76 => {
-                if (!self.ime and (self.ram.data[consts.Mem.IE] & self.ram.data[consts.Mem.IF]) != 0) {
+                const pending = self.ram.data[consts.Mem.IE] & self.ram.data[consts.Mem.IF] & 0x1F;
+                if (!self.ime and pending != 0) {
                     self.halt_bug = true;
-                }
-                else if (!self.ime and (self.ram.data[consts.Mem.IE] & self.ram.data[consts.Mem.IF]) == 0) {
-                    self.halted = true;
                 }
                 else {
                     self.halted = true;

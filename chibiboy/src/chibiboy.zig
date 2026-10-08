@@ -6,3 +6,4 @@ pub const TestResult = @import("emu.zig").TestResult;
 pub const Cartridge = @import("cartridge.zig").Cartridge;
 pub const CPU = @import("cpu.zig").CPU;
 pub const RAM = @import("ram.zig").RAM;
+pub const consts = @import("consts.zig");
